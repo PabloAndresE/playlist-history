@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  spotifyId       String   @unique
+  email           String
+  displayName     String
+  avatarUrl       String?
+  accessToken     String
+  refreshToken    String
+  tokenExpiresAt  DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trackedPlaylists TrackedPlaylist[]
+}
+
+model TrackedPlaylist {
+  id                String   @id @default(cuid())
+  userId            String
+  spotifyPlaylistId String
+  name              String
+  description       String?
+  coverImageUrl     String?
+  ownerSpotifyId    String
+  ownerDisplayName  String
+  isPublic          Boolean  @default(false)
+  isCollaborative   Boolean  @default(false)
+  trackCount        Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots PlaylistSnapshot[]
+  changes   PlaylistChange[]
+
+  @@unique([userId, spotifyPlaylistId])
+}
+
+enum SnapshotSource {
+  CRON
+  ON_DEMAND
+}
+
+model PlaylistSnapshot {
+  id                 String         @id @default(cuid())
+  trackedPlaylistId  String
+  takenAt            DateTime       @default(now())
+  trackCount         Int
+  source             SnapshotSource
+  tracks             Json
+
+  trackedPlaylist TrackedPlaylist  @relation(fields: [trackedPlaylistId], references: [id], onDelete: Cascade)
+  changes         PlaylistChange[]
+
+  @@index([trackedPlaylistId, takenAt])
+}
+
+enum ChangeType {
+  ADDED
+  REMOVED
+}
+
+model PlaylistChange {
+  id                 String     @id @default(cuid())
+  trackedPlaylistId  String
+  snapshotId         String
+  trackSpotifyId     String
+  trackName          String
+  artistName         String
+  albumName          String
+  albumImageUrl      String?
+  changeType         ChangeType
+  detectedAt         DateTime   @default(now())
+  changedBySpotifyId String?
+
+  trackedPlaylist TrackedPlaylist  @relation(fields: [trackedPlaylistId], references: [id], onDelete: Cascade)
+  snapshot        PlaylistSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([trackedPlaylistId, detectedAt])
+}
+
+model TrackGenreCache {
+  id              String   @id @default(cuid())
+  artistSpotifyId String   @unique
+  genres          Json
+  fetchedAt       DateTime @default(now())
+}
