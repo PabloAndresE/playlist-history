@@ -9,7 +9,7 @@ Inspired by [playlisthistory.app](https://playlisthistory.app/) but with a diffe
 ## Stack
 
 - **Framework:** Next.js 15 (App Router) + TypeScript
-- **Database:** PostgreSQL on Neon (serverless)
+- **Database:** PostgreSQL on Supabase
 - **Auth:** NextAuth.js v5 (Auth.js) with Spotify OAuth
 - **ORM:** Prisma
 - **Styles:** Tailwind CSS 4
