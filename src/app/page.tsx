@@ -54,15 +54,15 @@ const faqs = [
   },
   {
     q: "What analytics are available?",
-    a: "We track genre evolution over time, artist rotation (who comes and goes), playlist growth, and collaborative activity for shared playlists.",
+    a: "We track genre distribution, artist diversity, playlist growth by decade, hidden gems, biggest hits, and more. All from day one.",
   },
 ];
 
 export default function HomePage() {
   return (
-    <div>
+    <div className="bg-gray-950">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 text-white">
+      <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1DB954]/20 via-transparent to-transparent" />
         <div className="relative max-w-4xl mx-auto px-4 pt-24 pb-28 text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 rounded-full px-4 py-1.5 mb-8">
@@ -71,7 +71,7 @@ export default function HomePage() {
               Tracking playlist changes daily
             </span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight">
+          <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight text-white">
             Never lose a song from{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1DB954] to-[#1ed760]">
               your playlists
@@ -97,7 +97,7 @@ export default function HomePage() {
               See examples
             </Link>
           </div>
-          <p className="mt-6 text-xs text-gray-500">
+          <p className="mt-6 text-xs text-gray-600">
             Free forever. Uses the official Spotify API.
           </p>
         </div>
@@ -105,28 +105,28 @@ export default function HomePage() {
 
       {/* Demo table */}
       <section className="max-w-3xl mx-auto px-4 -mt-12 relative z-10 pb-20">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-xl shadow-gray-200/50 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="rounded-2xl border border-white/10 bg-gray-900 shadow-2xl shadow-black/40 overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold text-white">
                 My Favorite Mix
               </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                3 songs added, 2 removed — Sep 12, 2026
+              <p className="text-xs text-gray-500 mt-0.5">
+                3 songs added, 2 removed
               </p>
             </div>
-            <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+            <span className="text-xs text-gray-500 bg-white/5 px-3 py-1 rounded-full">
               Live demo
             </span>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-white/5">
             {demoChanges.map((item, i) => (
               <div
                 key={i}
                 className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${
                   item.type === "REMOVED"
-                    ? "bg-red-50/40"
-                    : "bg-green-50/40"
+                    ? "bg-red-500/5"
+                    : "bg-green-500/5"
                 }`}
               >
                 <img
@@ -136,14 +136,14 @@ export default function HomePage() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900 truncate">
+                    <span className="text-sm font-medium text-white truncate">
                       {item.track}
                     </span>
                     <ChangeBadge type={item.type} />
                   </div>
                   <span className="text-xs text-gray-500">{item.artist}</span>
                 </div>
-                <span className="text-sm text-gray-400 hidden md:block">
+                <span className="text-sm text-gray-500 hidden md:block">
                   {item.album}
                 </span>
               </div>
@@ -153,9 +153,9 @@ export default function HomePage() {
       </section>
 
       {/* How it works */}
-      <section className="bg-white py-20 border-t border-gray-100">
+      <section className="py-20 border-t border-white/5">
         <div className="max-w-4xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
+          <h2 className="text-3xl font-bold text-white text-center mb-4">
             How it works
           </h2>
           <p className="text-center text-gray-500 mb-14 max-w-lg mx-auto">
@@ -163,28 +163,28 @@ export default function HomePage() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             <div className="text-center">
-              <div className="w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <span className="text-xl font-bold text-white">1</span>
+              <div className="w-14 h-14 bg-[#1DB954]/10 border border-[#1DB954]/20 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <span className="text-xl font-bold text-[#1DB954]">1</span>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg">Connect Spotify</h3>
+              <h3 className="font-semibold text-white text-lg">Connect Spotify</h3>
               <p className="mt-2 text-sm text-gray-500 leading-relaxed">
                 Log in with your Spotify account. We only read your playlists, nothing else.
               </p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <span className="text-xl font-bold text-white">2</span>
+              <div className="w-14 h-14 bg-[#1DB954]/10 border border-[#1DB954]/20 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <span className="text-xl font-bold text-[#1DB954]">2</span>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg">Pick playlists</h3>
+              <h3 className="font-semibold text-white text-lg">Pick playlists</h3>
               <p className="mt-2 text-sm text-gray-500 leading-relaxed">
                 Choose which playlists you want to monitor. We start tracking immediately.
               </p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <span className="text-xl font-bold text-white">3</span>
+              <div className="w-14 h-14 bg-[#1DB954]/10 border border-[#1DB954]/20 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <span className="text-xl font-bold text-[#1DB954]">3</span>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg">See every change</h3>
+              <h3 className="font-semibold text-white text-lg">See every change</h3>
               <p className="mt-2 text-sm text-gray-500 leading-relaxed">
                 Every addition and removal is logged. Browse history, analytics, and restore anytime.
               </p>
@@ -194,45 +194,45 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="bg-gray-50 py-20">
+      <section className="py-20 border-t border-white/5">
         <div className="max-w-4xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
+          <h2 className="text-3xl font-bold text-white text-center mb-4">
             More than just history
           </h2>
           <p className="text-center text-gray-500 mb-14">
             Powerful tools to understand how your playlists evolve.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-[#1DB954]/30 hover:shadow-lg hover:shadow-[#1DB954]/5 transition-all">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-[#1DB954]/30 hover:bg-[#1DB954]/5 transition-all">
               <div className="w-12 h-12 bg-[#1DB954]/10 rounded-xl flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-[#1DB954]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg">Analytics</h3>
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                Genre evolution, artist rotation, and growth trends for every playlist you track.
+              <h3 className="font-semibold text-white text-lg">Analytics</h3>
+              <p className="mt-2 text-sm text-gray-400 leading-relaxed">
+                Genre distribution, artist diversity, decades, hidden gems, and popularity insights.
               </p>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-purple-300 hover:shadow-lg hover:shadow-purple-500/5 transition-all">
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg">Social</h3>
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+              <h3 className="font-semibold text-white text-lg">Social</h3>
+              <p className="mt-2 text-sm text-gray-400 leading-relaxed">
                 See who added or removed tracks in collaborative playlists. Activity feed per contributor.
               </p>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-blue-500/30 hover:bg-blue-500/5 transition-all">
+              <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg">Snapshot & Restore</h3>
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+              <h3 className="font-semibold text-white text-lg">Snapshot & Restore</h3>
+              <p className="mt-2 text-sm text-gray-400 leading-relaxed">
                 Browse your playlist at any point in time and restore it with one click.
               </p>
             </div>
@@ -241,35 +241,37 @@ export default function HomePage() {
       </section>
 
       {/* FAQ */}
-      <section className="bg-white max-w-3xl mx-auto px-4 py-20">
-        <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
-          Questions?
-        </h2>
-        <p className="text-center text-gray-500 mb-10">
-          Everything you need to know about Playlist History.
-        </p>
-        <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <details key={i} className="group border border-gray-200 rounded-xl overflow-hidden">
-              <summary className="flex items-center justify-between p-5 cursor-pointer text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors">
-                {faq.q}
-                <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </summary>
-              <p className="px-5 pb-5 text-sm text-gray-500 leading-relaxed">{faq.a}</p>
-            </details>
-          ))}
+      <section className="py-20 border-t border-white/5">
+        <div className="max-w-3xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-white text-center mb-4">
+            Questions?
+          </h2>
+          <p className="text-center text-gray-500 mb-10">
+            Everything you need to know about Playlist History.
+          </p>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <details key={i} className="group border border-white/10 rounded-xl overflow-hidden">
+                <summary className="flex items-center justify-between p-5 cursor-pointer text-sm font-medium text-gray-200 hover:bg-white/5 transition-colors">
+                  {faq.q}
+                  <svg className="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </summary>
+                <p className="px-5 pb-5 text-sm text-gray-400 leading-relaxed">{faq.a}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="bg-gray-950 text-white py-20">
+      <section className="py-20 border-t border-white/5">
         <div className="max-w-2xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">
+          <h2 className="text-3xl font-bold text-white mb-4">
             Ready to track your playlists?
           </h2>
-          <p className="text-gray-400 mb-8">
+          <p className="text-gray-500 mb-8">
             Connect your Spotify account and start monitoring changes in seconds.
           </p>
           <Link
@@ -285,7 +287,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-950 border-t border-white/5 py-8 text-center">
+      <footer className="border-t border-white/5 py-8 text-center">
         <p className="text-sm text-gray-600">
           Built with the Spotify API. Not affiliated with Spotify AB.
         </p>
