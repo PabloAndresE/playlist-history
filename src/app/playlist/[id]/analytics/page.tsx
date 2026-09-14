@@ -5,88 +5,48 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
+  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
 } from "recharts";
 
 interface Insights {
-  popularity: {
-    average: number;
-    buckets: { label: string; count: number }[];
-    hipsterScore: number;
-  } | null;
-  hiddenGems: {
-    name: string;
-    artist: string;
-    popularity: number;
-    imageUrl: string | null;
-    spotifyId: string;
-  }[];
-  biggestHits: {
-    name: string;
-    artist: string;
-    popularity: number;
-    imageUrl: string | null;
-    spotifyId: string;
-  }[];
-  radar: Record<string, number> | null;
+  duration: {
+    total: string;
+    totalMs: number;
+    average: string;
+    shortest: { name: string; artist: string; duration: string; imageUrl: string | null } | null;
+    longest: { name: string; artist: string; duration: string; imageUrl: string | null } | null;
+  };
+  decades: { decade: string; count: number }[];
+  explicit: { count: number; percentage: number };
   genreDistribution: { genre: string; count: number }[];
   artistDiversity: {
     totalArtists: number;
+    totalAlbums: number;
     topArtistShare: number;
     diversityScore: number;
     distribution: { name: string; count: number; percentage: number }[];
   };
+  freshness: {
+    avgAgeYears: number | null;
+    newestYear: number | null;
+    oldestYear: number | null;
+  };
   totalTracks: number;
 }
 
-const GENRE_COLORS = [
+const COLORS = [
   "#1DB954", "#6366f1", "#f97316", "#06b6d4", "#eab308",
   "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f59e0b",
   "#3b82f6", "#84cc16",
 ];
-
-function HipsterMeter({ score }: { score: number }) {
-  const label =
-    score >= 80 ? "Ultra hipster" :
-    score >= 60 ? "Pretty obscure" :
-    score >= 40 ? "Balanced taste" :
-    score >= 20 ? "Mainstream leaning" :
-    "Pure mainstream";
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-gray-500">Mainstream</span>
-        <span className="text-xs text-gray-500">Underground</span>
-      </div>
-      <div className="h-4 bg-gray-100 rounded-full overflow-hidden relative">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-[#1DB954] to-[#6366f1] transition-all"
-          style={{ width: `${score}%` }}
-        />
-        <div
-          className="absolute top-0 h-full w-1 bg-white border border-gray-300 rounded"
-          style={{ left: `${score}%`, transform: "translateX(-50%)" }}
-        />
-      </div>
-      <p className="text-center text-sm font-medium text-gray-700 mt-2">{label}</p>
-    </div>
-  );
-}
 
 export default function AnalyticsPage() {
   const { status } = useSession();
@@ -122,17 +82,10 @@ export default function AnalyticsPage() {
   if (!insights) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center text-gray-500">
-        Could not load analytics. Make sure the playlist has been synced.
+        Could not load analytics. Try syncing the playlist first.
       </div>
     );
   }
-
-  const radarData = insights.radar
-    ? Object.entries(insights.radar).map(([key, value]) => ({
-        feature: key.charAt(0).toUpperCase() + key.slice(1),
-        value,
-      }))
-    : [];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
@@ -148,65 +101,36 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Popularity / Hipster Score */}
-        {insights.popularity ? (
-        <div className="bg-white p-6 rounded-2xl border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Popularity</h2>
-          <p className="text-xs text-gray-400 mb-5">How mainstream is your taste?</p>
-          <div className="text-center mb-5">
-            <p className="text-5xl font-bold text-gray-900">{insights.popularity.average}</p>
-            <p className="text-xs text-gray-400 mt-1">Average popularity (0-100)</p>
-          </div>
-          <HipsterMeter score={insights.popularity.hipsterScore} />
-          <div className="mt-5 space-y-1.5">
-            {insights.popularity.buckets.map((b) => (
-              <div key={b.label} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-32 shrink-0">{b.label}</span>
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#1DB954]"
-                    style={{
-                      width: `${insights.totalTracks > 0 ? (b.count / insights.totalTracks) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-                <span className="text-xs text-gray-400 w-6 text-right">{b.count}</span>
-              </div>
-            ))}
-          </div>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-xl border border-gray-100 text-center">
+          <p className="text-2xl font-bold text-gray-900">{insights.duration.total}</p>
+          <p className="text-xs text-gray-500 mt-1">Total duration</p>
         </div>
-        ) : null}
+        <div className="bg-white p-4 rounded-xl border border-gray-100 text-center">
+          <p className="text-2xl font-bold text-gray-900">{insights.artistDiversity.totalArtists}</p>
+          <p className="text-xs text-gray-500 mt-1">Artists</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-gray-100 text-center">
+          <p className="text-2xl font-bold text-gray-900">{insights.artistDiversity.totalAlbums}</p>
+          <p className="text-xs text-gray-500 mt-1">Albums</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-gray-100 text-center">
+          <p className="text-2xl font-bold text-gray-900">
+            {insights.freshness.avgAgeYears !== null ? `${insights.freshness.avgAgeYears}y` : "—"}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">Avg song age</p>
+        </div>
+      </div>
 
-        {/* Radar Chart */}
-        {radarData.length > 0 && (
-          <div className="bg-white p-6 rounded-2xl border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Audio Profile</h2>
-            <p className="text-xs text-gray-400 mb-2">What your playlist sounds like</p>
-            <ResponsiveContainer width="100%" height={280}>
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis dataKey="feature" tick={{ fontSize: 11, fill: "#6b7280" }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar
-                  dataKey="value"
-                  stroke="#1DB954"
-                  fill="#1DB954"
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Genres */}
         {insights.genreDistribution.length > 0 && (
           <div className="bg-white p-6 rounded-2xl border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-1">Genres</h2>
-            <p className="text-xs text-gray-400 mb-4">Top genres in your playlist</p>
+            <p className="text-xs text-gray-400 mb-4">What your playlist sounds like</p>
             <div className="flex gap-4">
-              <div className="w-36 h-36 shrink-0">
+              <div className="w-32 h-32 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -215,11 +139,11 @@ export default function AnalyticsPage() {
                       nameKey="genre"
                       cx="50%"
                       cy="50%"
-                      outerRadius={65}
-                      innerRadius={35}
+                      outerRadius={60}
+                      innerRadius={30}
                     >
                       {insights.genreDistribution.slice(0, 6).map((_, i) => (
-                        <Cell key={i} fill={GENRE_COLORS[i]} />
+                        <Cell key={i} fill={COLORS[i]} />
                       ))}
                     </Pie>
                   </PieChart>
@@ -230,7 +154,7 @@ export default function AnalyticsPage() {
                   <div key={g.genre} className="flex items-center gap-2">
                     <div
                       className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: GENRE_COLORS[i % GENRE_COLORS.length] }}
+                      style={{ backgroundColor: COLORS[i % COLORS.length] }}
                     />
                     <span className="text-xs text-gray-700 truncate flex-1">{g.genre}</span>
                     <span className="text-xs text-gray-400">{g.count}</span>
@@ -245,7 +169,7 @@ export default function AnalyticsPage() {
         <div className="bg-white p-6 rounded-2xl border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Artist Diversity</h2>
           <p className="text-xs text-gray-400 mb-4">
-            {insights.artistDiversity.totalArtists} unique artists
+            How varied is your playlist?
           </p>
           <div className="text-center mb-4">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full border-4 border-[#1DB954]">
@@ -253,22 +177,21 @@ export default function AnalyticsPage() {
                 {insights.artistDiversity.diversityScore}
               </span>
             </div>
-            <p className="text-xs text-gray-400 mt-2">Diversity score</p>
+            <p className="text-xs text-gray-400 mt-2">
+              Top 3 artists: {insights.artistDiversity.topArtistShare}% of tracks
+            </p>
           </div>
-          <p className="text-xs text-gray-500 text-center mb-4">
-            Top 3 artists make up {insights.artistDiversity.topArtistShare}% of the playlist
-          </p>
           <div className="space-y-2">
             {insights.artistDiversity.distribution.slice(0, 6).map((a) => (
               <div key={a.name} className="flex items-center gap-2">
                 <span className="text-xs text-gray-700 truncate flex-1">{a.name}</span>
-                <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-[#1DB954]"
-                    style={{ width: `${a.percentage}%` }}
+                    style={{ width: `${Math.min(a.percentage * 3, 100)}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-400 w-12 text-right">
+                <span className="text-xs text-gray-400 w-14 text-right">
                   {a.count} ({a.percentage}%)
                 </span>
               </div>
@@ -276,73 +199,83 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Hidden Gems */}
-        {insights.hiddenGems.length > 0 && (
-        <div className="bg-white p-6 rounded-2xl border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Hidden Gems</h2>
-          <p className="text-xs text-gray-400 mb-4">Your least-known tracks, the real finds</p>
-          <div className="space-y-2">
-            {insights.hiddenGems.map((t) => (
-              <a
-                key={t.spotifyId}
-                href={`https://open.spotify.com/track/${t.spotifyId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {t.imageUrl ? (
-                  <img src={t.imageUrl} alt="" className="w-9 h-9 rounded" />
-                ) : (
-                  <div className="w-9 h-9 rounded bg-gray-100" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{t.artist}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
-                    {t.popularity}/100
-                  </span>
-                </div>
-              </a>
-            ))}
+        {/* Decades */}
+        {insights.decades.length > 0 && (
+          <div className="bg-white p-6 rounded-2xl border border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Decades</h2>
+            <p className="text-xs text-gray-400 mb-4">
+              {insights.freshness.oldestYear && insights.freshness.newestYear
+                ? `Spanning ${insights.freshness.oldestYear} to ${insights.freshness.newestYear}`
+                : "When your tracks were released"}
+            </p>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={insights.decades}>
+                <XAxis dataKey="decade" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid #e5e7eb",
+                    fontSize: "13px",
+                  }}
+                />
+                <Bar dataKey="count" fill="#1DB954" radius={[4, 4, 0, 0]} name="Tracks" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </div>
         )}
 
-        {/* Biggest Hits */}
-        {insights.biggestHits.length > 0 && (
+        {/* Duration & Fun Facts */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Biggest Hits</h2>
-          <p className="text-xs text-gray-400 mb-4">Your most popular tracks right now</p>
-          <div className="space-y-2">
-            {insights.biggestHits.map((t) => (
-              <a
-                key={t.spotifyId}
-                href={`https://open.spotify.com/track/${t.spotifyId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {t.imageUrl ? (
-                  <img src={t.imageUrl} alt="" className="w-9 h-9 rounded" />
-                ) : (
-                  <div className="w-9 h-9 rounded bg-gray-100" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{t.artist}</p>
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Duration & Stats</h2>
+          <p className="text-xs text-gray-400 mb-5">Fun facts about your playlist</p>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm text-gray-600">Average track length</span>
+              <span className="text-sm font-semibold text-gray-900">{insights.duration.average}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm text-gray-600">Explicit tracks</span>
+              <span className="text-sm font-semibold text-gray-900">
+                {insights.explicit.count} ({insights.explicit.percentage}%)
+              </span>
+            </div>
+
+            {insights.duration.shortest && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-400 mb-1">Shortest track</p>
+                <div className="flex items-center gap-2">
+                  {insights.duration.shortest.imageUrl && (
+                    <img src={insights.duration.shortest.imageUrl} alt="" className="w-8 h-8 rounded" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{insights.duration.shortest.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{insights.duration.shortest.artist}</p>
+                  </div>
+                  <span className="text-xs text-gray-400">{insights.duration.shortest.duration}</span>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs text-[#1DB954] bg-green-50 px-2 py-0.5 rounded-full">
-                    {t.popularity}/100
-                  </span>
+              </div>
+            )}
+
+            {insights.duration.longest && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-400 mb-1">Longest track</p>
+                <div className="flex items-center gap-2">
+                  {insights.duration.longest.imageUrl && (
+                    <img src={insights.duration.longest.imageUrl} alt="" className="w-8 h-8 rounded" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{insights.duration.longest.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{insights.duration.longest.artist}</p>
+                  </div>
+                  <span className="text-xs text-gray-400">{insights.duration.longest.duration}</span>
                 </div>
-              </a>
-            ))}
+              </div>
+            )}
           </div>
         </div>
-        )}
       </div>
     </div>
   );

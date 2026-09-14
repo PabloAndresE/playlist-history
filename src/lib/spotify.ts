@@ -28,6 +28,9 @@ export interface NormalizedTrack {
   albumImageUrl: string | null;
   addedAt: string;
   addedBy: string | null;
+  durationMs: number;
+  explicit: boolean;
+  releaseDate: string | null;
 }
 
 async function refreshAccessToken(userId: string): Promise<string> {
@@ -162,6 +165,9 @@ export async function getPlaylistTracks(
         albumImageUrl: track.album?.images?.[2]?.url ?? track.album?.images?.[0]?.url ?? null,
         addedAt: entry.added_at,
         addedBy: entry.added_by?.id ?? null,
+        durationMs: track.duration_ms ?? 0,
+        explicit: track.explicit ?? false,
+        releaseDate: track.album?.release_date ?? null,
       });
     }
 
