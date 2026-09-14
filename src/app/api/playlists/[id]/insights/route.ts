@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NormalizedTrack } from "@/lib/spotify";
-import { getGenresForArtists } from "@/lib/lastfm";
+import { getGenresForArtists, getPopularityForTracks } from "@/lib/lastfm";
 
 export async function GET(
   _req: Request,
@@ -129,6 +129,65 @@ export async function GET(
         percentage: Math.round((count / tracks.length) * 100),
       }));
 
+    // --- POPULARITY (via Last.fm listeners) ---
+    let popularity = null;
+    let hiddenGems: { name: string; artist: string; listeners: number; imageUrl: string | null; spotifyId: string }[] = [];
+    let biggestHits: { name: string; artist: string; listeners: number; imageUrl: string | null; spotifyId: string }[] = [];
+    try {
+      const trackList = tracks.map((t) => ({ name: t.name, artist: t.artistName.split(", ")[0] }));
+      const popMap = await getPopularityForTracks(trackList);
+
+      const tracksWithPop = tracks
+        .map((t) => {
+          const key = `${t.artistName.split(", ")[0]}::${t.name}`;
+          const pop = popMap.get(key);
+          return { ...t, listeners: pop?.listeners ?? 0 };
+        })
+        .filter((t) => t.listeners > 0);
+
+      if (tracksWithPop.length > 0) {
+        const listeners = tracksWithPop.map((t) => t.listeners);
+        const maxListeners = Math.max(...listeners);
+
+        // Normalize to 0-100 scale
+        const normalize = (l: number) => Math.round((l / maxListeners) * 100);
+
+        const avgNormalized = Math.round(
+          tracksWithPop.reduce((s, t) => s + normalize(t.listeners), 0) / tracksWithPop.length
+        );
+
+        const buckets = [
+          { label: "Underground", count: 0 },
+          { label: "Niche", count: 0 },
+          { label: "Rising", count: 0 },
+          { label: "Popular", count: 0 },
+          { label: "Mainstream", count: 0 },
+        ];
+        for (const t of tracksWithPop) {
+          const n = normalize(t.listeners);
+          if (n <= 20) buckets[0].count++;
+          else if (n <= 40) buckets[1].count++;
+          else if (n <= 60) buckets[2].count++;
+          else if (n <= 80) buckets[3].count++;
+          else buckets[4].count++;
+        }
+
+        popularity = { average: avgNormalized, buckets, hipsterScore: 100 - avgNormalized };
+
+        const sorted = [...tracksWithPop].sort((a, b) => a.listeners - b.listeners);
+        hiddenGems = sorted.slice(0, 5).map((t) => ({
+          name: t.name, artist: t.artistName, listeners: t.listeners,
+          imageUrl: t.albumImageUrl, spotifyId: t.spotifyId,
+        }));
+        biggestHits = [...tracksWithPop].sort((a, b) => b.listeners - a.listeners).slice(0, 5).map((t) => ({
+          name: t.name, artist: t.artistName, listeners: t.listeners,
+          imageUrl: t.albumImageUrl, spotifyId: t.spotifyId,
+        }));
+      }
+    } catch (e) {
+      console.error("Last.fm popularity fetch failed:", e);
+    }
+
     // --- ALBUM DIVERSITY ---
     const albumSet = new Set(tracks.map((t) => t.albumId).filter(Boolean));
 
@@ -150,6 +209,9 @@ export async function GET(
       decades,
       explicit: { count: explicitCount, percentage: explicitPercentage },
       genreDistribution,
+      popularity,
+      hiddenGems,
+      biggestHits,
       artistDiversity: {
         totalArtists,
         totalAlbums: albumSet.size,

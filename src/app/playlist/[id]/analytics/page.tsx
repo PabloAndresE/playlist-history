@@ -16,6 +16,14 @@ import {
   Cell,
 } from "recharts";
 
+interface TrackWithPop {
+  name: string;
+  artist: string;
+  listeners: number;
+  imageUrl: string | null;
+  spotifyId: string;
+}
+
 interface Insights {
   duration: {
     total: string;
@@ -27,6 +35,13 @@ interface Insights {
   decades: { decade: string; count: number }[];
   explicit: { count: number; percentage: number };
   genreDistribution: { genre: string; count: number }[];
+  popularity: {
+    average: number;
+    buckets: { label: string; count: number }[];
+    hipsterScore: number;
+  } | null;
+  hiddenGems: TrackWithPop[];
+  biggestHits: TrackWithPop[];
   artistDiversity: {
     totalArtists: number;
     totalAlbums: number;
@@ -40,6 +55,37 @@ interface Insights {
     oldestYear: number | null;
   };
   totalTracks: number;
+}
+
+function formatListeners(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
+}
+
+function HipsterMeter({ score }: { score: number }) {
+  const label =
+    score >= 80 ? "Ultra hipster" :
+    score >= 60 ? "Pretty obscure" :
+    score >= 40 ? "Balanced taste" :
+    score >= 20 ? "Mainstream leaning" :
+    "Pure mainstream";
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-gray-500">Mainstream</span>
+        <span className="text-xs text-gray-500">Underground</span>
+      </div>
+      <div className="h-4 bg-gray-100 rounded-full overflow-hidden relative">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-[#1DB954] to-[#6366f1] transition-all"
+          style={{ width: `${score}%` }}
+        />
+      </div>
+      <p className="text-center text-sm font-medium text-gray-700 mt-2">{label}</p>
+    </div>
+  );
 }
 
 const COLORS = [
@@ -276,6 +322,99 @@ export default function AnalyticsPage() {
             )}
           </div>
         </div>
+
+        {/* Popularity / Hipster Score */}
+        {insights.popularity && (
+          <div className="bg-white p-6 rounded-2xl border border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Popularity</h2>
+            <p className="text-xs text-gray-400 mb-5">Based on Last.fm listener data</p>
+            <div className="text-center mb-5">
+              <p className="text-4xl font-bold text-gray-900">{insights.popularity.average}</p>
+              <p className="text-xs text-gray-400 mt-1">Relative popularity score</p>
+            </div>
+            <HipsterMeter score={insights.popularity.hipsterScore} />
+            <div className="mt-5 space-y-1.5">
+              {insights.popularity.buckets.map((b) => (
+                <div key={b.label} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-24 shrink-0">{b.label}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#1DB954]"
+                      style={{
+                        width: `${insights.totalTracks > 0 ? (b.count / insights.totalTracks) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-400 w-6 text-right">{b.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Hidden Gems */}
+        {insights.hiddenGems.length > 0 && (
+          <div className="bg-white p-6 rounded-2xl border border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Hidden Gems</h2>
+            <p className="text-xs text-gray-400 mb-4">Your least-known tracks</p>
+            <div className="space-y-2">
+              {insights.hiddenGems.map((t) => (
+                <a
+                  key={t.spotifyId}
+                  href={`https://open.spotify.com/track/${t.spotifyId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  {t.imageUrl ? (
+                    <img src={t.imageUrl} alt="" className="w-9 h-9 rounded" />
+                  ) : (
+                    <div className="w-9 h-9 rounded bg-gray-100" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{t.artist}</p>
+                  </div>
+                  <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                    {formatListeners(t.listeners)} listeners
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Biggest Hits */}
+        {insights.biggestHits.length > 0 && (
+          <div className="bg-white p-6 rounded-2xl border border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Biggest Hits</h2>
+            <p className="text-xs text-gray-400 mb-4">Your most popular tracks</p>
+            <div className="space-y-2">
+              {insights.biggestHits.map((t) => (
+                <a
+                  key={t.spotifyId}
+                  href={`https://open.spotify.com/track/${t.spotifyId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  {t.imageUrl ? (
+                    <img src={t.imageUrl} alt="" className="w-9 h-9 rounded" />
+                  ) : (
+                    <div className="w-9 h-9 rounded bg-gray-100" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{t.artist}</p>
+                  </div>
+                  <span className="text-xs text-[#1DB954] bg-green-50 px-2 py-0.5 rounded-full">
+                    {formatListeners(t.listeners)} listeners
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
