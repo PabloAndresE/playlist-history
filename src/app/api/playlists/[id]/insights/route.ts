@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { NormalizedTrack, getArtistGenres } from "@/lib/spotify";
+import { NormalizedTrack } from "@/lib/spotify";
+import { getGenresForArtists } from "@/lib/lastfm";
 
 export async function GET(
   _req: Request,
@@ -83,15 +84,15 @@ export async function GET(
     const explicitCount = tracks.filter((t) => t.explicit).length;
     const explicitPercentage = tracks.length > 0 ? Math.round((explicitCount / tracks.length) * 100) : 0;
 
-    // --- GENRES ---
-    const artistIds = [...new Set(tracks.map((t) => t.artistId).filter(Boolean))];
+    // --- GENRES (via Last.fm) ---
+    const artistNames = [...new Set(tracks.map((t) => t.artistName).filter(Boolean))];
     let genreDistribution: { genre: string; count: number }[] = [];
     try {
-      if (artistIds.length > 0) {
-        const genreMap = await getArtistGenres(session.user.id, artistIds);
+      if (artistNames.length > 0) {
+        const genreMap = await getGenresForArtists(artistNames);
         const genreCounts = new Map<string, number>();
         for (const track of tracks) {
-          const genres = genreMap.get(track.artistId) ?? [];
+          const genres = genreMap.get(track.artistName) ?? [];
           for (const genre of genres) {
             genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
           }
@@ -102,7 +103,7 @@ export async function GET(
           .map(([genre, count]) => ({ genre, count }));
       }
     } catch (e) {
-      console.error("Genres fetch failed:", e);
+      console.error("Last.fm genres fetch failed:", e);
     }
 
     // --- ARTIST DIVERSITY ---
