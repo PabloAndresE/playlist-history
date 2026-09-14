@@ -27,7 +27,7 @@ interface Insights {
     average: number;
     buckets: { label: string; count: number }[];
     hipsterScore: number;
-  };
+  } | null;
   hiddenGems: {
     name: string;
     artist: string;
@@ -150,6 +150,7 @@ export default function AnalyticsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Popularity / Hipster Score */}
+        {insights.popularity ? (
         <div className="bg-white p-6 rounded-2xl border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Popularity</h2>
           <p className="text-xs text-gray-400 mb-5">How mainstream is your taste?</p>
@@ -175,6 +176,7 @@ export default function AnalyticsPage() {
             ))}
           </div>
         </div>
+        ) : null}
 
         {/* Radar Chart */}
         {radarData.length > 0 && (
@@ -275,6 +277,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Hidden Gems */}
+        {insights.hiddenGems.length > 0 && (
         <div className="bg-white p-6 rounded-2xl border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Hidden Gems</h2>
           <p className="text-xs text-gray-400 mb-4">Your least-known tracks, the real finds</p>
@@ -305,8 +308,10 @@ export default function AnalyticsPage() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Biggest Hits */}
+        {insights.biggestHits.length > 0 && (
         <div className="bg-white p-6 rounded-2xl border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Biggest Hits</h2>
           <p className="text-xs text-gray-400 mb-4">Your most popular tracks right now</p>
@@ -337,6 +342,7 @@ export default function AnalyticsPage() {
             ))}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

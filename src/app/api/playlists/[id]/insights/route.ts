@@ -70,125 +70,121 @@ export async function GET(
 
     const tracks = snapshot.tracks as unknown as NormalizedTrack[];
     const trackIds = tracks.map((t) => t.spotifyId).filter(Boolean);
-
     const token = await getAccessToken(session.user.id);
 
-    // Fetch full track details (for popularity) in batches of 50
-    const trackDetails: { id: string; name: string; popularity: number; artists: { name: string }[] }[] = [];
-    for (let i = 0; i < trackIds.length; i += 50) {
-      const batch = trackIds.slice(i, i + 50);
-      const res = await fetch(
-        `${SPOTIFY_API_BASE}/tracks?ids=${batch.join(",")}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) {
-        console.error(`tracks ${res.status}:`, await res.text());
-        continue;
-      }
-      const data = await res.json();
-      for (const t of data.tracks) {
-        if (t) trackDetails.push({ id: t.id, name: t.name, popularity: t.popularity, artists: t.artists });
-      }
-    }
+    // --- POPULARITY (may fail in dev mode) ---
+    let popularity = null;
+    let hiddenGems: { name: string; artist: string; popularity: number; imageUrl: string | null; spotifyId: string }[] = [];
+    let biggestHits: { name: string; artist: string; popularity: number; imageUrl: string | null; spotifyId: string }[] = [];
 
-    // Fetch audio features in batches of 100
-    const audioFeatures: Record<string, number>[] = [];
-    for (let i = 0; i < trackIds.length; i += 100) {
-      const batch = trackIds.slice(i, i + 100);
-      const res = await fetch(
-        `${SPOTIFY_API_BASE}/audio-features?ids=${batch.join(",")}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) continue;
-      const data = await res.json();
-      for (const f of data.audio_features) {
-        if (f) audioFeatures.push(f);
-      }
-    }
-
-    // --- POPULARITY ---
-    const popularities = trackDetails.map((t) => t.popularity);
-    const avgPopularity = popularities.length
-      ? Math.round(popularities.reduce((a, b) => a + b, 0) / popularities.length)
-      : 0;
-
-    const popularityBuckets = [
-      { label: "Underground (0-20)", count: 0 },
-      { label: "Niche (21-40)", count: 0 },
-      { label: "Rising (41-60)", count: 0 },
-      { label: "Popular (61-80)", count: 0 },
-      { label: "Mainstream (81-100)", count: 0 },
-    ];
-    for (const p of popularities) {
-      if (p <= 20) popularityBuckets[0].count++;
-      else if (p <= 40) popularityBuckets[1].count++;
-      else if (p <= 60) popularityBuckets[2].count++;
-      else if (p <= 80) popularityBuckets[3].count++;
-      else popularityBuckets[4].count++;
-    }
-
-    // --- HIDDEN GEMS ---
-    const sortedByPop = [...trackDetails].sort((a, b) => a.popularity - b.popularity);
-    const hiddenGems = sortedByPop.slice(0, 5).map((t) => {
-      const snap = tracks.find((s) => s.spotifyId === t.id);
-      return {
-        name: t.name,
-        artist: t.artists.map((a) => a.name).join(", "),
-        popularity: t.popularity,
-        imageUrl: snap?.albumImageUrl ?? null,
-        spotifyId: t.id,
-      };
-    });
-    const biggestHits = [...trackDetails]
-      .sort((a, b) => b.popularity - a.popularity)
-      .slice(0, 5)
-      .map((t) => {
-        const snap = tracks.find((s) => s.spotifyId === t.id);
-        return {
-          name: t.name,
-          artist: t.artists.map((a) => a.name).join(", "),
-          popularity: t.popularity,
-          imageUrl: snap?.albumImageUrl ?? null,
-          spotifyId: t.id,
-        };
-      });
-
-    // --- RADAR (audio features avg) ---
-    let radar = null;
-    if (audioFeatures.length > 0) {
-      const avg = (key: string) =>
-        Math.round(
-          (audioFeatures.reduce((s, f) => s + (f[key] ?? 0), 0) / audioFeatures.length) * 100
+    try {
+      const trackDetails: { id: string; name: string; popularity: number; artists: { name: string }[] }[] = [];
+      for (let i = 0; i < trackIds.length; i += 50) {
+        const batch = trackIds.slice(i, i + 50);
+        const res = await fetch(
+          `${SPOTIFY_API_BASE}/tracks?ids=${batch.join(",")}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-      radar = {
-        energy: avg("energy"),
-        danceability: avg("danceability"),
-        happiness: avg("valence"),
-        acousticness: avg("acousticness"),
-        instrumentalness: avg("instrumentalness"),
-        liveness: avg("liveness"),
-      };
-    }
-
-    // --- GENRES ---
-    const artistIds = [...new Set(tracks.map((t) => t.artistId).filter(Boolean))];
-    let genreDistribution: { genre: string; count: number }[] = [];
-    if (artistIds.length > 0) {
-      const genreMap = await getArtistGenres(session.user.id, artistIds);
-      const genreCounts = new Map<string, number>();
-      for (const track of tracks) {
-        const genres = genreMap.get(track.artistId) ?? [];
-        for (const genre of genres) {
-          genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+        if (!res.ok) throw new Error(`${res.status}`);
+        const data = await res.json();
+        for (const t of data.tracks) {
+          if (t) trackDetails.push(t);
         }
       }
-      genreDistribution = [...genreCounts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 12)
-        .map(([genre, count]) => ({ genre, count }));
+
+      if (trackDetails.length > 0) {
+        const pops = trackDetails.map((t) => t.popularity);
+        const avg = Math.round(pops.reduce((a, b) => a + b, 0) / pops.length);
+
+        const buckets = [
+          { label: "Underground (0-20)", count: 0 },
+          { label: "Niche (21-40)", count: 0 },
+          { label: "Rising (41-60)", count: 0 },
+          { label: "Popular (61-80)", count: 0 },
+          { label: "Mainstream (81-100)", count: 0 },
+        ];
+        for (const p of pops) {
+          if (p <= 20) buckets[0].count++;
+          else if (p <= 40) buckets[1].count++;
+          else if (p <= 60) buckets[2].count++;
+          else if (p <= 80) buckets[3].count++;
+          else buckets[4].count++;
+        }
+
+        popularity = { average: avg, buckets, hipsterScore: 100 - avg };
+
+        const sorted = [...trackDetails].sort((a, b) => a.popularity - b.popularity);
+        hiddenGems = sorted.slice(0, 5).map((t) => {
+          const snap = tracks.find((s) => s.spotifyId === t.id);
+          return { name: t.name, artist: t.artists.map((a) => a.name).join(", "), popularity: t.popularity, imageUrl: snap?.albumImageUrl ?? null, spotifyId: t.id };
+        });
+        biggestHits = [...trackDetails].sort((a, b) => b.popularity - a.popularity).slice(0, 5).map((t) => {
+          const snap = tracks.find((s) => s.spotifyId === t.id);
+          return { name: t.name, artist: t.artists.map((a) => a.name).join(", "), popularity: t.popularity, imageUrl: snap?.albumImageUrl ?? null, spotifyId: t.id };
+        });
+      }
+    } catch (e) {
+      console.error("Popularity fetch failed (dev mode?):", e);
     }
 
-    // --- ARTIST DIVERSITY ---
+    // --- RADAR (may fail in dev mode) ---
+    let radar = null;
+    try {
+      const audioFeatures: Record<string, number>[] = [];
+      for (let i = 0; i < trackIds.length; i += 100) {
+        const batch = trackIds.slice(i, i + 100);
+        const res = await fetch(
+          `${SPOTIFY_API_BASE}/audio-features?ids=${batch.join(",")}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) throw new Error(`${res.status}`);
+        const data = await res.json();
+        for (const f of data.audio_features) {
+          if (f) audioFeatures.push(f);
+        }
+      }
+
+      if (audioFeatures.length > 0) {
+        const avg = (key: string) =>
+          Math.round(
+            (audioFeatures.reduce((s, f) => s + (f[key] ?? 0), 0) / audioFeatures.length) * 100
+          );
+        radar = {
+          energy: avg("energy"),
+          danceability: avg("danceability"),
+          happiness: avg("valence"),
+          acousticness: avg("acousticness"),
+          instrumentalness: avg("instrumentalness"),
+          liveness: avg("liveness"),
+        };
+      }
+    } catch (e) {
+      console.error("Audio features fetch failed (dev mode?):", e);
+    }
+
+    // --- GENRES (uses artist endpoint, should work) ---
+    const artistIds = [...new Set(tracks.map((t) => t.artistId).filter(Boolean))];
+    let genreDistribution: { genre: string; count: number }[] = [];
+    try {
+      if (artistIds.length > 0) {
+        const genreMap = await getArtistGenres(session.user.id, artistIds);
+        const genreCounts = new Map<string, number>();
+        for (const track of tracks) {
+          const genres = genreMap.get(track.artistId) ?? [];
+          for (const genre of genres) {
+            genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+          }
+        }
+        genreDistribution = [...genreCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 12)
+          .map(([genre, count]) => ({ genre, count }));
+      }
+    } catch (e) {
+      console.error("Genres fetch failed:", e);
+    }
+
+    // --- ARTIST DIVERSITY (from snapshot, always works) ---
     const artistCounts = new Map<string, number>();
     for (const t of tracks) {
       artistCounts.set(t.artistName, (artistCounts.get(t.artistName) ?? 0) + 1);
@@ -197,16 +193,12 @@ export async function GET(
     const topArtistShare = totalArtists > 0
       ? Math.round(
           ([...artistCounts.values()].sort((a, b) => b - a).slice(0, 3).reduce((a, b) => a + b, 0) /
-            tracks.length) *
-            100
+            tracks.length) * 100
         )
       : 0;
-
-    // Diversity score: 0 = one artist dominates, 100 = perfectly spread
     const diversityScore = totalArtists > 0
       ? Math.round((1 - topArtistShare / 100) * (Math.min(totalArtists, tracks.length) / tracks.length) * 100)
       : 0;
-
     const artistDistribution = [...artistCounts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
@@ -217,11 +209,7 @@ export async function GET(
       }));
 
     return NextResponse.json({
-      popularity: {
-        average: avgPopularity,
-        buckets: popularityBuckets,
-        hipsterScore: 100 - avgPopularity,
-      },
+      popularity,
       hiddenGems,
       biggestHits,
       radar,
