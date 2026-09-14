@@ -54,7 +54,9 @@ async function refreshAccessToken(userId: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to refresh token: ${response.status}`);
+    const body = await response.text();
+    console.error(`Token refresh failed ${response.status}:`, body);
+    throw new Error(`Token refresh failed: ${response.status} - ${body}`);
   }
 
   const data = await response.json();
@@ -76,9 +78,11 @@ async function spotifyFetch(
   endpoint: string
 ): Promise<Response> {
   const token = await refreshAccessToken(userId);
-  return fetch(`${SPOTIFY_API_BASE}${endpoint}`, {
+  const url = `${SPOTIFY_API_BASE}${endpoint}`;
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  return res;
 }
 
 export async function getUserPlaylists(userId: string) {
@@ -87,7 +91,11 @@ export async function getUserPlaylists(userId: string) {
 
   while (next) {
     const res = await spotifyFetch(userId, next);
-    if (!res.ok) throw new Error(`Spotify API error: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`getUserPlaylists ${res.status}:`, body);
+      throw new Error(`Spotify ${res.status}: ${body}`);
+    }
     const data = await res.json();
     playlists.push(
       ...data.items
@@ -128,25 +136,32 @@ export async function getPlaylistTracks(
   spotifyPlaylistId: string
 ): Promise<NormalizedTrack[]> {
   const tracks: NormalizedTrack[] = [];
-  let next: string | null = `/playlists/${spotifyPlaylistId}/tracks?limit=100&fields=items(track(id,name,artists(id,name),album(id,name,images)),added_at,added_by(id)),next`;
+  // Use /items endpoint (new API) instead of /tracks (deprecated, returns 403)
+  let next: string | null = `/playlists/${spotifyPlaylistId}/items?limit=100`;
 
   while (next) {
     const res = await spotifyFetch(userId, next);
-    if (!res.ok) throw new Error(`Spotify API error: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`getPlaylistTracks ${res.status} for ${spotifyPlaylistId}:`, body);
+      throw new Error(`Spotify ${res.status}: ${body}`);
+    }
     const data = await res.json();
 
-    for (const item of data.items as SpotifyTrack[]) {
-      if (!item.track) continue;
+    for (const entry of data.items) {
+      // New API uses "item" instead of "track"
+      const track = entry.item ?? entry.track;
+      if (!track || !track.id) continue;
       tracks.push({
-        spotifyId: item.track.id,
-        name: item.track.name,
-        artistId: item.track.artists[0]?.id ?? "",
-        artistName: item.track.artists.map((a) => a.name).join(", "),
-        albumId: item.track.album.id,
-        albumName: item.track.album.name,
-        albumImageUrl: item.track.album.images?.[2]?.url ?? item.track.album.images?.[0]?.url ?? null,
-        addedAt: item.added_at,
-        addedBy: item.added_by?.id ?? null,
+        spotifyId: track.id,
+        name: track.name,
+        artistId: track.artists?.[0]?.id ?? "",
+        artistName: track.artists?.map((a: { name: string }) => a.name).join(", ") ?? "Unknown",
+        albumId: track.album?.id ?? "",
+        albumName: track.album?.name ?? "",
+        albumImageUrl: track.album?.images?.[2]?.url ?? track.album?.images?.[0]?.url ?? null,
+        addedAt: entry.added_at,
+        addedBy: entry.added_by?.id ?? null,
       });
     }
 
