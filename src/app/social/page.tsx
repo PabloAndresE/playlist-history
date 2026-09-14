@@ -57,7 +57,7 @@ export default function SocialPage() {
         Social
       </h1>
       <p className="text-sm text-text-secondary mb-8">
-        Activity from collaborative playlists — see who added or removed tracks
+        Who's adding and removing songs in your shared playlists
       </p>
 
       {changes.length === 0 ? (
@@ -73,7 +73,7 @@ export default function SocialPage() {
           </svg>
           <p className="text-lg text-text-secondary font-medium">No collaborative activity yet</p>
           <p className="text-sm text-text-muted mt-1 mb-6 max-w-sm mx-auto">
-            Track collaborative playlists to see a live feed of who's adding and removing songs.
+            Once you track a collaborative playlist and someone makes a change, it'll show up here.
           </p>
           <Link
             href="/dashboard"

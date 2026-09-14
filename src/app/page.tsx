@@ -49,7 +49,7 @@ export default function HomePage() {
             <div className="inline-flex items-center gap-2 bg-accent-muted border border-accent/20 rounded-lg px-3 py-1.5 mb-6">
               <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
               <span className="text-xs text-accent font-medium">
-                Tracking changes daily
+                Checking your playlists every day
               </span>
             </div>
             <h1 className="font-[family-name:var(--font-heading)] text-4xl md:text-5xl lg:text-[3.25rem] font-bold leading-[1.08] tracking-tight text-text-primary">
@@ -58,25 +58,19 @@ export default function HomePage() {
               <span className="text-text-secondary font-normal">Now you can see it.</span>
             </h1>
             <p className="mt-6 text-base text-text-secondary max-w-sm leading-relaxed">
-              Every song added or removed, tracked automatically.
-              Analytics, restore points, and collaborative activity.
+              Someone removed your favorite song? You'll know.
+              Plus genre stats, an underground score, and a way to undo it all.
             </p>
-            <div className="mt-8 flex items-center gap-3">
+            <div className="mt-8">
               <Link
                 href="/api/auth/signin"
-                className="bg-accent text-white font-semibold px-6 py-3 rounded-lg hover:bg-accent-hover transition-colors"
+                className="bg-accent text-white font-semibold px-6 py-3 rounded-lg hover:bg-accent-hover transition-colors inline-block"
               >
-                Start tracking free
-              </Link>
-              <Link
-                href="/explore"
-                className="text-text-secondary font-medium px-5 py-3 rounded-lg border border-border hover:border-text-muted transition-colors"
-              >
-                See examples
+                Connect Spotify
               </Link>
             </div>
             <p className="mt-4 text-xs text-text-muted">
-              Free forever. Read-only Spotify access.
+              We only read your playlists. That's it.
             </p>
           </div>
 
@@ -139,23 +133,23 @@ export default function HomePage() {
                 Connect Spotify
               </p>
               <p className="mt-2 text-sm text-text-secondary leading-relaxed">
-                Log in with your account. We request read-only access to your playlists — nothing else.
+                Log in with Spotify. We can only see your playlists — we can't change anything or see what you listen to.
               </p>
             </div>
             <div>
               <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-text-primary">
-                Pick what to track
+                Pick your playlists
               </p>
               <p className="mt-2 text-sm text-text-secondary leading-relaxed">
-                Choose which playlists matter to you. We snapshot them daily and log every change.
+                Choose which ones matter to you. We take a snapshot every day and compare what changed.
               </p>
             </div>
             <div>
               <p className="font-[family-name:var(--font-heading)] text-lg font-semibold text-text-primary">
-                Explore & restore
+                See what happened
               </p>
               <p className="mt-2 text-sm text-text-secondary leading-relaxed">
-                Browse your playlist at any point in time. See analytics, discover patterns, restore songs.
+                Who added what, who removed what, genre breakdowns, and a time machine to undo it all.
               </p>
             </div>
           </div>
@@ -169,10 +163,10 @@ export default function HomePage() {
             What you get
           </p>
           <h2 className="font-[family-name:var(--font-heading)] text-2xl md:text-3xl font-bold text-text-primary mb-4">
-            Discover what your playlists say about you
+            Your music taste, in numbers
           </h2>
           <p className="text-text-secondary max-w-lg mb-10">
-            Genre breakdowns, artist diversity, hidden gems, popularity scores — all computed automatically from your playlists.
+            How underground is your taste? What genres dominate? Which tracks does nobody else know about? We figure it out.
           </p>
 
           {/* Mock analytics dashboard */}
@@ -233,7 +227,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Hipster score + hidden gems */}
+            {/* Underground score + hidden gems */}
             <div className="bg-surface-1 rounded-xl border border-border-subtle p-5">
               <p className="text-sm font-semibold text-text-primary mb-1">Taste profile</p>
               <p className="text-xs text-text-muted mb-4">How obscure is your playlist?</p>
@@ -273,20 +267,20 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div>
               <h3 className="font-[family-name:var(--font-heading)] text-xl font-semibold text-text-primary">
-                Collaborative activity
+                Who did that?
               </h3>
               <p className="mt-2 text-sm text-text-secondary leading-relaxed">
-                See who added or removed tracks in shared playlists. A live activity feed
-                for every contributor — finally know who deleted your favorite song.
+                Collaborative playlists are chaos. Now you can see exactly who added
+                that weird song and who removed the one everyone liked.
               </p>
             </div>
             <div>
               <h3 className="font-[family-name:var(--font-heading)] text-xl font-semibold text-text-primary">
-                Snapshot & restore
+                Undo anything
               </h3>
               <p className="mt-2 text-sm text-text-secondary leading-relaxed">
-                We save your playlist state every day. Browse any version and restore it
-                to Spotify with one click. Like version control for your music.
+                We save your playlist every day. If something goes wrong,
+                pick any previous version and put it back on Spotify.
               </p>
             </div>
           </div>
@@ -298,10 +292,10 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <h2 className="font-[family-name:var(--font-heading)] text-2xl md:text-3xl font-bold text-text-primary">
-              Start tracking your playlists
+              Try it out
             </h2>
             <p className="text-text-secondary mt-2">
-              Free, takes 30 seconds, no credit card.
+              Just connect Spotify and pick a playlist. That's it.
             </p>
           </div>
           <Link
@@ -311,7 +305,7 @@ export default function HomePage() {
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
             </svg>
-            Get started with Spotify
+            Connect Spotify
           </Link>
         </div>
       </section>

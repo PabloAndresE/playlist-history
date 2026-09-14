@@ -173,7 +173,7 @@ export default function DashboardPage() {
           </svg>
           <p className="text-lg text-text-secondary font-medium">No playlists tracked yet</p>
           <p className="text-sm text-text-muted mt-1 mb-6 max-w-xs mx-auto">
-            Start by adding a playlist from your Spotify library. We'll track every change automatically.
+            Pick a playlist and we'll keep an eye on it for you.
           </p>
           <button
             onClick={fetchSpotifyPlaylists}

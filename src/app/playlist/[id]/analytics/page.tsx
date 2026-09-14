@@ -66,11 +66,11 @@ function formatListeners(n: number): string {
 
 function HipsterMeter({ score }: { score: number }) {
   const label =
-    score >= 80 ? "Ultra hipster" :
+    score >= 80 ? "Deep underground" :
     score >= 60 ? "Pretty obscure" :
-    score >= 40 ? "Balanced taste" :
-    score >= 20 ? "Mainstream leaning" :
-    "Pure mainstream";
+    score >= 40 ? "Balanced mix" :
+    score >= 20 ? "Mostly mainstream" :
+    "Full mainstream";
 
   return (
     <div>

@@ -68,7 +68,7 @@ export default function ExplorePage() {
           </svg>
           <p className="text-lg text-text-secondary font-medium">No public playlists yet</p>
           <p className="text-sm text-text-muted mt-1 mb-6 max-w-xs mx-auto">
-            When users track public playlists, they'll appear here with their change history.
+            When someone tracks a public playlist, it'll show up here.
           </p>
           <Link
             href="/api/auth/signin"

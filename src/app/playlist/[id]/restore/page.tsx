@@ -89,7 +89,7 @@ export default function RestorePage() {
             Snapshot & Restore
           </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Browse previous states and restore your playlist
+            Go back to any previous version of your playlist
           </p>
         </div>
       </div>

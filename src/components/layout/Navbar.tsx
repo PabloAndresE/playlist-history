@@ -39,7 +39,6 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
-          <NavLink href="/explore">Explore</NavLink>
           {session ? (
             <>
               <NavLink href="/dashboard">Dashboard</NavLink>
@@ -92,9 +91,6 @@ export default function Navbar() {
         }`}
       >
         <div className="space-y-3">
-          <Link href="/explore" className="block text-sm text-text-secondary hover:text-text-primary" onClick={() => setMenuOpen(false)}>
-            Explore
-          </Link>
           {session ? (
             <>
               <Link href="/dashboard" className="block text-sm text-text-secondary hover:text-text-primary" onClick={() => setMenuOpen(false)}>
