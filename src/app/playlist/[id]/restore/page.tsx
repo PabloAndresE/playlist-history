@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import SnapshotList from "@/components/playlist/SnapshotList";
+import { SkeletonList } from "@/components/ui/Skeleton";
 
 interface Snapshot {
   id: string;
@@ -62,8 +63,15 @@ export default function RestorePage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center text-gray-500">
-        Loading snapshots...
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="skeleton h-5 w-5 rounded" />
+          <div className="space-y-2">
+            <div className="skeleton h-7 w-48" />
+            <div className="skeleton h-4 w-64" />
+          </div>
+        </div>
+        <SkeletonList rows={4} />
       </div>
     );
   }
@@ -71,19 +79,16 @@ export default function RestorePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="flex items-center gap-4 mb-8">
-        <Link
-          href={`/playlist/${id}`}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Link href={`/playlist/${id}`} className="text-text-muted hover:text-text-secondary transition-colors" aria-label="Back to playlist">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">
             Snapshot & Restore
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-text-secondary mt-1">
             Browse previous states and restore your playlist
           </p>
         </div>
@@ -93,16 +98,17 @@ export default function RestorePage() {
         <div
           className={`p-4 rounded-lg mb-6 text-sm ${
             restoreResult.includes("successfully")
-              ? "bg-green-50 text-green-700"
-              : "bg-red-50 text-red-700"
+              ? "bg-added-muted text-added border border-added/20"
+              : "bg-removed-muted text-removed border border-removed/20"
           }`}
+          role="alert"
         >
           {restoreResult}
         </div>
       )}
 
-      <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-6">
-        <p className="text-sm text-yellow-800">
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+        <p className="text-sm text-amber-800">
           <strong>Warning:</strong> Restoring a snapshot will replace all
           tracks in your Spotify playlist with the tracks from that snapshot.
           This action cannot be undone through this app (but you can restore to

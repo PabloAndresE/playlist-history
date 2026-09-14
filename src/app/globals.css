@@ -1,6 +1,58 @@
 @import "tailwindcss";
 
+@theme {
+  --color-surface-0: #faf8f5;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f3f0eb;
+  --color-surface-3: #e8e4dd;
+  --color-border: #d6d0c6;
+  --color-border-subtle: #ebe7e0;
+  --color-text-primary: #1a1814;
+  --color-text-secondary: #5c574e;
+  --color-text-muted: #9a9488;
+  --color-accent: #1DB954;
+  --color-accent-hover: #1aa34a;
+  --color-accent-muted: rgba(29, 185, 84, 0.1);
+  --color-danger: #dc3545;
+  --color-danger-muted: rgba(220, 53, 69, 0.08);
+  --color-added: #1a7f42;
+  --color-added-muted: rgba(26, 127, 66, 0.08);
+  --color-removed: #c53030;
+  --color-removed-muted: rgba(197, 48, 48, 0.08);
+  --color-purple: #7c3aed;
+  --color-purple-muted: rgba(124, 58, 237, 0.08);
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-surface-3) 50%, var(--color-surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* Stagger fade-in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: fadeInUp 0.4s ease-out both;
 }

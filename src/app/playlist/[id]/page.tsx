@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import ChangeTimeline from "@/components/playlist/ChangeTimeline";
+import { SkeletonBlock, SkeletonStats } from "@/components/ui/Skeleton";
 
 interface PlaylistDetail {
   id: string;
@@ -77,7 +78,6 @@ export default function PlaylistDetailPage() {
     if (overviewRes.ok) setOverview(await overviewRes.json());
     setLoading(false);
 
-    // Fetch mood in background (non-blocking)
     fetch(`/api/playlists/${id}/mood`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setMood(data); });
@@ -100,16 +100,30 @@ export default function PlaylistDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center text-gray-500">
-        Loading...
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <div className="flex items-start gap-5 mb-8">
+          <SkeletonBlock className="w-24 h-24 shrink-0 rounded-xl" />
+          <div className="flex-1 space-y-3">
+            <SkeletonBlock className="h-7 w-48" />
+            <SkeletonBlock className="h-4 w-32" />
+            <div className="flex gap-2">
+              <SkeletonBlock className="h-8 w-24 rounded-lg" />
+              <SkeletonBlock className="h-8 w-24 rounded-lg" />
+            </div>
+          </div>
+        </div>
+        <SkeletonStats />
       </div>
     );
   }
 
   if (!playlist) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center text-gray-500">
-        Playlist not found
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <p className="text-lg text-text-secondary">Playlist not found</p>
+        <Link href="/dashboard" className="text-sm text-accent hover:text-accent-hover mt-2 inline-block">
+          Back to Dashboard
+        </Link>
       </div>
     );
   }
@@ -121,43 +135,43 @@ export default function PlaylistDetailPage() {
         {playlist.coverImageUrl ? (
           <img
             src={playlist.coverImageUrl}
-            alt=""
-            className="w-24 h-24 rounded-xl object-cover shadow-md"
+            alt={`${playlist.name} cover`}
+            className="w-24 h-24 rounded-xl object-cover shadow-lg shadow-black/10"
           />
         ) : (
-          <div className="w-24 h-24 rounded-xl bg-gray-100 flex items-center justify-center">
-            <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-24 h-24 rounded-xl bg-surface-2 flex items-center justify-center">
+            <svg className="w-10 h-10 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
           </div>
         )}
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{playlist.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            by {playlist.ownerDisplayName}
+          <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">{playlist.name}</h1>
+          <p className="text-sm text-text-secondary mt-1">
+            {playlist.ownerDisplayName}
             {playlist.isCollaborative && (
-              <span className="ml-2 text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full text-xs">
+              <span className="ml-2 text-purple bg-purple-muted px-2 py-0.5 rounded text-xs">
                 Collaborative
               </span>
             )}
           </p>
-          <div className="flex items-center gap-3 mt-4">
+          <div className="flex items-center gap-2 mt-4 flex-wrap">
             <button
               onClick={handleSync}
               disabled={syncing}
-              className="text-sm bg-[#1DB954] text-white px-4 py-1.5 rounded-full hover:bg-[#1aa34a] disabled:opacity-50 transition-colors"
+              className="text-sm bg-accent text-white font-semibold px-4 py-1.5 rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer"
             >
               {syncing ? "Syncing..." : "Sync now"}
             </button>
             <Link
               href={`/playlist/${id}/analytics`}
-              className="text-sm text-gray-600 px-4 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 transition-colors"
+              className="text-sm text-text-secondary px-4 py-1.5 rounded-lg border border-border hover:border-text-muted transition-colors"
             >
               Analytics
             </Link>
             <Link
               href={`/playlist/${id}/restore`}
-              className="text-sm text-gray-600 px-4 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 transition-colors"
+              className="text-sm text-text-secondary px-4 py-1.5 rounded-lg border border-border hover:border-text-muted transition-colors"
             >
               Restore
             </Link>
@@ -165,7 +179,7 @@ export default function PlaylistDetailPage() {
               href={`https://open.spotify.com/playlist/${playlist.spotifyPlaylistId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-[#1DB954] hover:underline"
+              className="text-sm text-accent hover:text-accent-hover transition-colors"
             >
               Open in Spotify
             </a>
@@ -175,40 +189,40 @@ export default function PlaylistDetailPage() {
 
       {/* Stats */}
       {overview && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-4 rounded-xl border border-gray-100">
-            <p className="text-2xl font-bold text-gray-900">{overview.totalTracks}</p>
-            <p className="text-xs text-gray-500 mt-1">Tracks</p>
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="bg-surface-1 p-4 rounded-xl border border-border-subtle text-center">
+            <p className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">{overview.totalTracks}</p>
+            <p className="text-xs text-text-muted mt-1">Tracks</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-100">
-            <p className="text-2xl font-bold text-gray-900">{overview.uniqueArtists}</p>
-            <p className="text-xs text-gray-500 mt-1">Artists</p>
+          <div className="bg-surface-1 p-4 rounded-xl border border-border-subtle text-center">
+            <p className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">{overview.uniqueArtists}</p>
+            <p className="text-xs text-text-muted mt-1">Artists</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-100">
-            <p className="text-2xl font-bold text-gray-900">{changes.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Changes detected</p>
+          <div className="bg-surface-1 p-4 rounded-xl border border-border-subtle text-center">
+            <p className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">{changes.length}</p>
+            <p className="text-xs text-text-muted mt-1">Changes detected</p>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
+      <div className="flex gap-1 bg-surface-1 border border-border-subtle rounded-lg p-1 mb-6">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${
+          className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors cursor-pointer ${
             activeTab === "overview"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-surface-2 text-text-primary"
+              : "text-text-muted hover:text-text-secondary"
           }`}
         >
           Overview
         </button>
         <button
           onClick={() => setActiveTab("changes")}
-          className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${
+          className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors cursor-pointer ${
             activeTab === "changes"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-surface-2 text-text-primary"
+              : "text-text-muted hover:text-text-secondary"
           }`}
         >
           Changes ({changes.length})
@@ -221,13 +235,13 @@ export default function PlaylistDetailPage() {
           {/* Mood / Vibe */}
           {mood?.available && mood.moods && mood.features && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Playlist Vibe</h3>
-              <div className="bg-white rounded-xl border border-gray-100 p-5">
+              <h3 className="text-sm font-semibold text-text-primary mb-3">Playlist Vibe</h3>
+              <div className="bg-surface-1 rounded-xl border border-border-subtle p-5">
                 <div className="flex flex-wrap gap-2 mb-5">
                   {mood.moods.map((m) => (
                     <span
                       key={m.mood}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium text-white"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white"
                       style={{ backgroundColor: m.color }}
                     >
                       {m.emoji} {m.mood}
@@ -238,15 +252,15 @@ export default function PlaylistDetailPage() {
                   {Object.entries(mood.features).map(([key, value]) => (
                     <div key={key}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500 capitalize">{key}</span>
-                        <span className="text-xs font-medium text-gray-700">
+                        <span className="text-xs text-text-muted capitalize">{key}</span>
+                        <span className="text-xs font-medium text-text-secondary">
                           {key === "tempo" ? `${value} BPM` : `${value}%`}
                         </span>
                       </div>
                       {key !== "tempo" && (
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-[#1DB954] transition-all"
+                            className="h-full rounded-full bg-accent transition-all"
                             style={{ width: `${value}%` }}
                           />
                         </div>
@@ -254,7 +268,7 @@ export default function PlaylistDetailPage() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-4">
+                <p className="text-xs text-text-muted mt-4">
                   Based on {mood.tracksAnalyzed} tracks analyzed
                 </p>
               </div>
@@ -264,21 +278,21 @@ export default function PlaylistDetailPage() {
           {/* Top Artists */}
           {overview.topArtists.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Artists</h3>
+              <h3 className="text-sm font-semibold text-text-primary mb-3">Top Artists</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {overview.topArtists.map((artist) => (
                   <div
                     key={artist.name}
-                    className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100"
+                    className="flex items-center gap-3 p-3 bg-surface-1 rounded-xl border border-border-subtle"
                   >
                     {artist.imageUrl ? (
                       <img src={artist.imageUrl} alt="" className="w-10 h-10 rounded-lg" />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-gray-100" />
+                      <div className="w-10 h-10 rounded-lg bg-surface-2" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{artist.name}</p>
-                      <p className="text-xs text-gray-400">{artist.count} tracks</p>
+                      <p className="text-sm font-medium text-text-primary truncate">{artist.name}</p>
+                      <p className="text-xs text-text-muted">{artist.count} tracks</p>
                     </div>
                   </div>
                 ))}
@@ -289,28 +303,28 @@ export default function PlaylistDetailPage() {
           {/* Recent Tracks */}
           {overview.recentTracks.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Recently Added</h3>
-              <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+              <h3 className="text-sm font-semibold text-text-primary mb-3">Recently Added</h3>
+              <div className="bg-surface-1 rounded-xl border border-border-subtle divide-y divide-border-subtle">
                 {overview.recentTracks.map((track) => (
                   <a
                     key={track.spotifyId}
                     href={`https://open.spotify.com/track/${track.spotifyId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-3 hover:bg-surface-2 transition-colors"
                   >
                     {track.imageUrl ? (
                       <img src={track.imageUrl} alt="" className="w-10 h-10 rounded" />
                     ) : (
-                      <div className="w-10 h-10 rounded bg-gray-100" />
+                      <div className="w-10 h-10 rounded bg-surface-2" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{track.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{track.artist}</p>
+                      <p className="text-sm font-medium text-text-primary truncate">{track.name}</p>
+                      <p className="text-xs text-text-secondary truncate">{track.artist}</p>
                     </div>
                     <div className="text-right hidden md:block">
-                      <p className="text-xs text-gray-400">{track.album}</p>
-                      <p className="text-xs text-gray-300">
+                      <p className="text-xs text-text-muted">{track.album}</p>
+                      <p className="text-xs text-text-muted">
                         {format(new Date(track.addedAt), "MMM d, yyyy")}
                       </p>
                     </div>
@@ -320,18 +334,24 @@ export default function PlaylistDetailPage() {
             </div>
           )}
 
-          {/* Last sync info */}
           {overview.lastSnapshot && (
-            <p className="text-xs text-gray-400 text-center">
+            <p className="text-xs text-text-muted text-center">
               Last snapshot: {format(new Date(overview.lastSnapshot), "MMM d, yyyy 'at' h:mm a")}
               {overview.snapshotSource === "CRON" ? " (auto)" : " (manual)"}
             </p>
           )}
 
           {overview.totalTracks === 0 && (
-            <div className="text-center py-12 text-gray-400">
-              <p className="text-lg">No snapshot yet</p>
-              <p className="text-sm mt-1">Click &quot;Sync now&quot; to take the first snapshot</p>
+            <div className="text-center py-12 border border-dashed border-border rounded-xl">
+              <p className="text-lg text-text-secondary">No snapshot yet</p>
+              <p className="text-sm text-text-muted mt-1 mb-4">Take the first snapshot to see your playlist overview.</p>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="bg-accent text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {syncing ? "Syncing..." : "Sync now"}
+              </button>
             </div>
           )}
         </div>

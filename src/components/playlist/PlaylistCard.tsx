@@ -10,6 +10,7 @@ interface Props {
   trackCount: number;
   isCollaborative: boolean;
   recentChanges?: number;
+  onUntrack?: () => void;
 }
 
 export default function PlaylistCard({
@@ -20,73 +21,84 @@ export default function PlaylistCard({
   trackCount,
   isCollaborative,
   recentChanges,
+  onUntrack,
 }: Props) {
   return (
-    <Link
-      href={`/playlist/${id}`}
-      className="group block p-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
-    >
-      <div className="flex items-start gap-4">
+    <div className="group relative bg-surface-1 rounded-xl border border-border-subtle hover:border-border transition-all">
+      <Link
+        href={`/playlist/${id}`}
+        className="flex items-center gap-4 p-4"
+      >
         {coverImageUrl ? (
           <img
             src={coverImageUrl}
-            alt=""
-            className="w-16 h-16 rounded-lg object-cover"
+            alt={`${name} cover`}
+            className="w-14 h-14 rounded-lg object-cover"
           />
         ) : (
-          <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-lg bg-surface-2 flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-gray-300"
+              className="w-7 h-7 text-text-muted"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
               />
             </svg>
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 truncate group-hover:text-[#1DB954] transition-colors">
+          <h3 className="font-semibold text-text-primary truncate group-hover:text-accent transition-colors">
             {name}
           </h3>
-          <p className="text-sm text-gray-500 mt-0.5">
-            by {ownerDisplayName}
+          <p className="text-sm text-text-secondary mt-0.5">
+            {ownerDisplayName}
           </p>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs text-gray-400">
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="text-xs text-text-muted">
               {trackCount} tracks
             </span>
             {isCollaborative && (
-              <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs text-purple bg-purple-muted px-2 py-0.5 rounded">
                 Collaborative
               </span>
             )}
             {recentChanges !== undefined && recentChanges > 0 && (
-              <span className="text-xs text-[#1DB954] bg-green-50 px-2 py-0.5 rounded-full">
-                {recentChanges} recent changes
+              <span className="text-xs text-accent bg-accent-muted px-2 py-0.5 rounded">
+                {recentChanges} changes
               </span>
             )}
           </div>
         </div>
         <svg
-          className="w-5 h-5 text-gray-300 group-hover:text-gray-500 transition-colors mt-1"
+          className="w-4 h-4 text-text-muted group-hover:text-text-secondary transition-colors shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-      </div>
-    </Link>
+      </Link>
+      {onUntrack && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onUntrack();
+          }}
+          className="absolute top-3 right-3 text-xs text-text-muted hover:text-danger bg-surface-2 hover:bg-danger-muted px-2.5 py-1 rounded-lg border border-border-subtle hover:border-danger/30 transition-all md:opacity-0 md:group-hover:opacity-100"
+          aria-label={`Stop tracking ${name}`}
+        >
+          Untrack
+        </button>
+      )}
+    </div>
   );
 }
