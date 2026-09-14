@@ -90,28 +90,30 @@ export async function getUserPlaylists(userId: string) {
     if (!res.ok) throw new Error(`Spotify API error: ${res.status}`);
     const data = await res.json();
     playlists.push(
-      ...data.items.map(
-        (p: {
-          id: string;
-          name: string;
-          description: string;
-          images: { url: string }[];
-          owner: { id: string; display_name: string };
-          public: boolean;
-          collaborative: boolean;
-          tracks: { total: number };
-        }) => ({
-          spotifyId: p.id,
-          name: p.name,
-          description: p.description,
-          coverImageUrl: p.images?.[0]?.url ?? null,
-          ownerSpotifyId: p.owner.id,
-          ownerDisplayName: p.owner.display_name,
-          isPublic: p.public ?? false,
-          isCollaborative: p.collaborative ?? false,
-          trackCount: p.tracks.total,
-        })
-      )
+      ...data.items
+        .filter((p: { id: string }) => p && p.id)
+        .map(
+          (p: {
+            id: string;
+            name: string;
+            description: string;
+            images: { url: string }[];
+            owner: { id: string; display_name: string };
+            public: boolean;
+            collaborative: boolean;
+            tracks?: { total: number };
+          }) => ({
+            spotifyId: p.id,
+            name: p.name,
+            description: p.description,
+            coverImageUrl: p.images?.[0]?.url ?? null,
+            ownerSpotifyId: p.owner?.id ?? "",
+            ownerDisplayName: p.owner?.display_name ?? "Unknown",
+            isPublic: p.public ?? false,
+            isCollaborative: p.collaborative ?? false,
+            trackCount: p.tracks?.total ?? 0,
+          })
+        )
     );
     next = data.next
       ? data.next.replace(SPOTIFY_API_BASE, "")

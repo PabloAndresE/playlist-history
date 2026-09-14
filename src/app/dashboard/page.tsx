@@ -85,6 +85,14 @@ export default function DashboardPage() {
     setTrackingId(null);
   };
 
+  const untrackPlaylist = async (id: string) => {
+    if (!confirm("Stop tracking this playlist?")) return;
+    const res = await fetch(`/api/playlists/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      await fetchTracked();
+    }
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center text-gray-500">
@@ -116,16 +124,26 @@ export default function DashboardPage() {
       {trackedPlaylists.length > 0 ? (
         <div className="space-y-3">
           {trackedPlaylists.map((p) => (
-            <PlaylistCard
-              key={p.id}
-              id={p.id}
-              name={p.name}
-              coverImageUrl={p.coverImageUrl}
-              ownerDisplayName={p.ownerDisplayName}
-              trackCount={p.trackCount}
-              isCollaborative={p.isCollaborative}
-              recentChanges={p._count.changes}
-            />
+            <div key={p.id} className="relative group">
+              <PlaylistCard
+                id={p.id}
+                name={p.name}
+                coverImageUrl={p.coverImageUrl}
+                ownerDisplayName={p.ownerDisplayName}
+                trackCount={p.trackCount}
+                isCollaborative={p.isCollaborative}
+                recentChanges={p._count.changes}
+              />
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  untrackPlaylist(p.id);
+                }}
+                className="absolute top-3 right-12 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-red-500 hover:text-red-700 bg-white px-2 py-1 rounded border border-red-200"
+              >
+                Untrack
+              </button>
+            </div>
           ))}
         </div>
       ) : (
