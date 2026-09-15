@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserPlaylists } from "@/lib/spotify";
+import { getUserPlaylists, LIKED_SONGS_ID } from "@/lib/spotify";
 import { syncPlaylist } from "@/lib/sync";
 
 export async function GET() {
@@ -26,10 +26,27 @@ export async function GET() {
     });
     const trackedSet = new Set(trackedIds.map((t) => t.spotifyPlaylistId));
 
-    const playlists = spotifyPlaylists.map((p) => ({
-      ...p,
-      isTracked: trackedSet.has(p.spotifyId),
-    }));
+    // Inject Liked Songs as a virtual playlist at the top
+    const likedSongs = {
+      spotifyId: LIKED_SONGS_ID,
+      name: "Liked Songs",
+      description: "Your saved tracks",
+      coverImageUrl: null,
+      ownerSpotifyId: user.spotifyId ?? "",
+      ownerDisplayName: "You",
+      isPublic: false,
+      isCollaborative: false,
+      trackCount: 0,
+      isTracked: trackedSet.has(LIKED_SONGS_ID),
+    };
+
+    const playlists = [
+      likedSongs,
+      ...spotifyPlaylists.map((p) => ({
+        ...p,
+        isTracked: trackedSet.has(p.spotifyId),
+      })),
+    ];
 
     return NextResponse.json(playlists);
   } catch (error) {
@@ -65,14 +82,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const playlists = await getUserPlaylists(user.id);
-    const playlist = playlists.find((p) => p.spotifyId === spotifyPlaylistId);
+    const isLikedSongs = spotifyPlaylistId === LIKED_SONGS_ID;
 
-    if (!playlist) {
-      return NextResponse.json(
-        { error: "Playlist not found" },
-        { status: 404 }
-      );
+    let playlistData: {
+      name: string;
+      description: string | null;
+      coverImageUrl: string | null;
+      ownerSpotifyId: string;
+      ownerDisplayName: string;
+      isPublic: boolean;
+      isCollaborative: boolean;
+      trackCount: number;
+    };
+
+    if (isLikedSongs) {
+      playlistData = {
+        name: "Liked Songs",
+        description: "Your saved tracks",
+        coverImageUrl: null,
+        ownerSpotifyId: user.spotifyId ?? "",
+        ownerDisplayName: "You",
+        isPublic: false,
+        isCollaborative: false,
+        trackCount: 0,
+      };
+    } else {
+      const playlists = await getUserPlaylists(user.id);
+      const playlist = playlists.find((p) => p.spotifyId === spotifyPlaylistId);
+
+      if (!playlist) {
+        return NextResponse.json(
+          { error: "Playlist not found" },
+          { status: 404 }
+        );
+      }
+      playlistData = playlist;
     }
 
     const tracked = await prisma.trackedPlaylist.upsert({
@@ -85,20 +129,20 @@ export async function POST(req: NextRequest) {
       create: {
         userId: user.id,
         spotifyPlaylistId,
-        name: playlist.name,
-        description: playlist.description,
-        coverImageUrl: playlist.coverImageUrl,
-        ownerSpotifyId: playlist.ownerSpotifyId,
-        ownerDisplayName: playlist.ownerDisplayName,
-        isPublic: playlist.isPublic,
-        isCollaborative: playlist.isCollaborative,
-        trackCount: playlist.trackCount,
+        name: playlistData.name,
+        description: playlistData.description,
+        coverImageUrl: playlistData.coverImageUrl,
+        ownerSpotifyId: playlistData.ownerSpotifyId,
+        ownerDisplayName: playlistData.ownerDisplayName,
+        isPublic: playlistData.isPublic,
+        isCollaborative: playlistData.isCollaborative,
+        trackCount: playlistData.trackCount,
       },
       update: {
-        name: playlist.name,
-        description: playlist.description,
-        coverImageUrl: playlist.coverImageUrl,
-        trackCount: playlist.trackCount,
+        name: playlistData.name,
+        description: playlistData.description,
+        coverImageUrl: playlistData.coverImageUrl,
+        trackCount: playlistData.trackCount,
       },
     });
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { replacePlaylistTracks, NormalizedTrack } from "@/lib/spotify";
+import { replacePlaylistTracks, NormalizedTrack, LIKED_SONGS_ID } from "@/lib/spotify";
 
 export async function POST(
   req: NextRequest,
@@ -28,6 +28,10 @@ export async function POST(
 
   if (!tracked) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (tracked.spotifyPlaylistId === LIKED_SONGS_ID) {
+    return NextResponse.json({ error: "Cannot restore Liked Songs — Spotify doesn't allow replacing saved tracks in bulk" }, { status: 400 });
   }
 
   const snapshot = await prisma.playlistSnapshot.findFirst({

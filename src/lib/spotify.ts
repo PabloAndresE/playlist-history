@@ -177,6 +177,46 @@ export async function getPlaylistTracks(
   return tracks;
 }
 
+export const LIKED_SONGS_ID = "__liked_songs__";
+
+export async function getLikedTracks(userId: string): Promise<NormalizedTrack[]> {
+  const tracks: NormalizedTrack[] = [];
+  let next: string | null = "/me/tracks?limit=50";
+
+  while (next) {
+    const res = await spotifyFetch(userId, next);
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`getLikedTracks ${res.status}:`, body);
+      throw new Error(`Spotify ${res.status}: ${body}`);
+    }
+    const data = await res.json();
+
+    for (const entry of data.items) {
+      const track = entry.track;
+      if (!track || !track.id) continue;
+      tracks.push({
+        spotifyId: track.id,
+        name: track.name,
+        artistId: track.artists?.[0]?.id ?? "",
+        artistName: track.artists?.map((a: { name: string }) => a.name).join(", ") ?? "Unknown",
+        albumId: track.album?.id ?? "",
+        albumName: track.album?.name ?? "",
+        albumImageUrl: track.album?.images?.[2]?.url ?? track.album?.images?.[0]?.url ?? null,
+        addedAt: entry.added_at,
+        addedBy: null,
+        durationMs: track.duration_ms ?? 0,
+        explicit: track.explicit ?? false,
+        releaseDate: track.album?.release_date ?? null,
+      });
+    }
+
+    next = data.next ? data.next.replace(SPOTIFY_API_BASE, "") : null;
+  }
+
+  return tracks;
+}
+
 export async function replacePlaylistTracks(
   userId: string,
   spotifyPlaylistId: string,

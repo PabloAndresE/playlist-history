@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { getPlaylistTracks, NormalizedTrack } from "./spotify";
+import { getPlaylistTracks, getLikedTracks, NormalizedTrack, LIKED_SONGS_ID } from "./spotify";
 import { SnapshotSource } from "@prisma/client";
 
 export interface SyncResult {
@@ -20,10 +20,9 @@ export async function syncPlaylist(
 
   if (!tracked) throw new Error("Tracked playlist not found");
 
-  const currentTracks = await getPlaylistTracks(
-    tracked.userId,
-    tracked.spotifyPlaylistId
-  );
+  const currentTracks = tracked.spotifyPlaylistId === LIKED_SONGS_ID
+    ? await getLikedTracks(tracked.userId)
+    : await getPlaylistTracks(tracked.userId, tracked.spotifyPlaylistId);
 
   const lastSnapshot = await prisma.playlistSnapshot.findFirst({
     where: { trackedPlaylistId },
