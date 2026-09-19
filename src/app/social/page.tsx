@@ -68,15 +68,27 @@ function getGenreColor(index: number) {
   return GENRE_COLORS[index % GENRE_COLORS.length];
 }
 
+// Alias map — hardcoded for now, eventually user-settable
+const ALIASES: Record<string, string> = {
+  "j3fjfbaa4ok18y7x4x706gefg": "Charlie",
+};
+
 function displayName(spotifyId: string, currentUserId?: string) {
-  return spotifyId === currentUserId ? "You" : spotifyId;
+  if (spotifyId === currentUserId) return "You";
+  return ALIASES[spotifyId] ?? spotifyId;
 }
 
-function compatLabel(score: number): { text: string; color: string } {
-  if (score >= 70) return { text: "Soulmates", color: "text-emerald-600" };
-  if (score >= 50) return { text: "Great match", color: "text-accent" };
-  if (score >= 30) return { text: "Some overlap", color: "text-amber-600" };
-  return { text: "Different vibes", color: "text-rose-500" };
+function displayInitial(spotifyId: string, currentUserId?: string) {
+  if (spotifyId === currentUserId) return "Y";
+  const name = ALIASES[spotifyId];
+  return name ? name.charAt(0) : spotifyId.charAt(0).toUpperCase();
+}
+
+function compatLabel(score: number): { text: string; emoji: string; gradient: string } {
+  if (score >= 70) return { text: "Soulmates", emoji: "fire", gradient: "from-emerald-400 to-cyan-400" };
+  if (score >= 50) return { text: "Great match", emoji: "sparkles", gradient: "from-purple to-accent" };
+  if (score >= 30) return { text: "Some overlap", emoji: "handshake", gradient: "from-amber-400 to-orange-400" };
+  return { text: "Different vibes", emoji: "seedling", gradient: "from-rose-400 to-pink-400" };
 }
 
 function GenreVenn({ overlap, currentUserId }: { overlap: TasteOverlap; currentUserId?: string }) {
@@ -87,42 +99,47 @@ function GenreVenn({ overlap, currentUserId }: { overlap: TasteOverlap; currentU
   const shared = overlap.sharedGenres;
 
   return (
-    <div className="bg-surface-1 rounded-xl border border-border-subtle p-5">
-      <h4 className="text-xs font-semibold text-text-secondary mb-4 text-center">
-        {nameA} vs {nameB} — Genre Venn
-      </h4>
-      <svg viewBox="0 0 400 220" className="w-full max-w-md mx-auto" aria-label={`Genre overlap between ${nameA} and ${nameB}`}>
+    <div className="relative overflow-hidden rounded-xl bg-surface-1 border border-border-subtle">
+      {/* Venn circles as HTML layout */}
+      <div className="relative h-64 sm:h-56">
         {/* Left circle */}
-        <circle cx="150" cy="110" r="95" fill="rgba(139, 92, 246, 0.12)" stroke="rgba(139, 92, 246, 0.4)" strokeWidth="1.5" />
+        <div className="absolute left-[8%] sm:left-[12%] top-1/2 -translate-y-1/2 w-44 h-44 sm:w-48 sm:h-48 rounded-full bg-purple/8 border border-purple/20" />
         {/* Right circle */}
-        <circle cx="250" cy="110" r="95" fill="rgba(34, 197, 94, 0.12)" stroke="rgba(34, 197, 94, 0.4)" strokeWidth="1.5" />
+        <div className="absolute right-[8%] sm:right-[12%] top-1/2 -translate-y-1/2 w-44 h-44 sm:w-48 sm:h-48 rounded-full bg-accent/8 border border-accent/20" />
 
-        {/* Left label */}
-        <text x="95" y="28" textAnchor="middle" className="fill-purple text-[11px] font-semibold">{nameA}</text>
+        {/* Left label + genres */}
+        <div className="absolute left-[4%] sm:left-[6%] top-3 w-32 sm:w-36 text-center">
+          <p className="text-xs font-bold text-purple mb-2">{nameA}</p>
+          <div className="flex flex-wrap justify-center gap-1">
+            {onlyA.slice(0, 4).map((g) => (
+              <span key={g} className="text-[10px] bg-purple/10 text-purple/80 px-1.5 py-0.5 rounded-full">{g}</span>
+            ))}
+          </div>
+        </div>
 
-        {/* Right label */}
-        <text x="305" y="28" textAnchor="middle" className="fill-accent text-[11px] font-semibold">{nameB}</text>
+        {/* Center — shared genres */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 sm:w-32 text-center z-10">
+          <p className="text-[10px] font-semibold text-text-secondary mb-1.5">Both</p>
+          <div className="flex flex-wrap justify-center gap-1">
+            {shared.slice(0, 4).map((g) => (
+              <span key={g} className="text-[10px] bg-text-primary/10 text-text-primary px-1.5 py-0.5 rounded-full font-medium">{g}</span>
+            ))}
+            {shared.length > 4 && (
+              <span className="text-[10px] text-text-muted">+{shared.length - 4}</span>
+            )}
+          </div>
+        </div>
 
-        {/* Only A genres */}
-        {onlyA.slice(0, 4).map((g, i) => (
-          <text key={`a-${g}`} x="100" y={65 + i * 18} textAnchor="middle" className="fill-purple text-[10px]">{g}</text>
-        ))}
-
-        {/* Shared genres */}
-        {shared.slice(0, 4).map((g, i) => (
-          <text key={`s-${g}`} x="200" y={75 + i * 18} textAnchor="middle" className="fill-text-primary text-[10px] font-medium">{g}</text>
-        ))}
-
-        {/* Only B genres */}
-        {onlyB.slice(0, 4).map((g, i) => (
-          <text key={`b-${g}`} x="300" y={65 + i * 18} textAnchor="middle" className="fill-accent text-[10px]">{g}</text>
-        ))}
-
-        {/* Center count if many shared */}
-        {shared.length > 4 && (
-          <text x="200" y={75 + 4 * 18} textAnchor="middle" className="fill-text-muted text-[9px]">+{shared.length - 4} more</text>
-        )}
-      </svg>
+        {/* Right label + genres */}
+        <div className="absolute right-[4%] sm:right-[6%] top-3 w-32 sm:w-36 text-center">
+          <p className="text-xs font-bold text-accent mb-2">{nameB}</p>
+          <div className="flex flex-wrap justify-center gap-1">
+            {onlyB.slice(0, 4).map((g) => (
+              <span key={g} className="text-[10px] bg-accent/10 text-accent/80 px-1.5 py-0.5 rounded-full">{g}</span>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -252,7 +269,7 @@ export default function SocialPage() {
                       {/* Header */}
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-full ${getColor(i)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
-                          {isYou ? "Y" : contributor.spotifyId.charAt(0).toUpperCase()}
+                          {displayInitial(contributor.spotifyId, data.currentUserSpotifyId)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -353,80 +370,68 @@ export default function SocialPage() {
             </div>
           </div>
 
-          {/* Compatibility */}
+          {/* Compatibility + Venn per pair */}
           {data.tasteOverlaps.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-text-primary mb-3">Compatibility</h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {data.tasteOverlaps.map((overlap, i) => {
                   const label = compatLabel(overlap.compatibilityScore);
+                  const nameA = displayName(overlap.userA, data.currentUserSpotifyId);
+                  const nameB = displayName(overlap.userB, data.currentUserSpotifyId);
                   return (
-                    <div key={i} className="bg-surface-1 rounded-xl border border-border-subtle p-5">
-                      {/* Score header */}
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium text-purple">
-                            {displayName(overlap.userA, data.currentUserSpotifyId)}
-                          </span>
-                          <span className="text-text-muted">&times;</span>
-                          <span className="font-medium text-accent">
-                            {displayName(overlap.userB, data.currentUserSpotifyId)}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">{overlap.compatibilityScore}</span>
-                          <span className="text-xs text-text-muted ml-0.5">/100</span>
-                        </div>
-                      </div>
-                      <p className={`text-xs font-semibold ${label.color} mb-3`}>{label.text}</p>
-                      {/* Progress */}
-                      <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden mb-4">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-purple via-accent to-emerald-500 transition-all"
-                          style={{ width: `${overlap.compatibilityScore}%` }}
-                        />
-                      </div>
-                      {/* Shared artists */}
-                      {overlap.sharedArtists.length > 0 && (
-                        <div className="mb-3">
-                          <p className="text-xs text-text-muted mb-1.5">Artists in common</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {overlap.sharedArtists.map((artist) => (
-                              <span key={artist} className="text-xs bg-purple/10 text-purple px-2 py-0.5 rounded-full font-medium">
-                                {artist}
-                              </span>
-                            ))}
+                    <div key={i} className="rounded-2xl border border-border-subtle overflow-hidden">
+                      {/* Blend-style header */}
+                      <div className={`bg-gradient-to-r ${label.gradient} p-5 text-white`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-white/70 text-xs font-medium mb-0.5">{nameA} & {nameB}</p>
+                            <p className="text-lg font-bold">{label.text}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-[family-name:var(--font-heading)] text-4xl font-black leading-none">{overlap.compatibilityScore}</p>
+                            <p className="text-white/60 text-xs mt-0.5">out of 100</p>
                           </div>
                         </div>
-                      )}
-                      {/* Shared genres */}
-                      {overlap.sharedGenres.length > 0 && (
-                        <div>
-                          <p className="text-xs text-text-muted mb-1.5">Genres in common</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {overlap.sharedGenres.map((genre) => (
-                              <span key={genre} className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full font-medium">
-                                {genre}
-                              </span>
-                            ))}
-                          </div>
+                        {/* Score bar */}
+                        <div className="mt-3 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-white/80 transition-all" style={{ width: `${overlap.compatibilityScore}%` }} />
                         </div>
-                      )}
+                      </div>
+
+                      {/* Shared content */}
+                      <div className="bg-surface-1 p-4 space-y-3">
+                        {overlap.sharedArtists.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-text-secondary mb-1.5">Artists you both listen to</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {overlap.sharedArtists.map((artist) => (
+                                <span key={artist} className="text-xs bg-purple/10 text-purple px-2.5 py-1 rounded-full font-medium">
+                                  {artist}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {overlap.sharedGenres.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-text-secondary mb-1.5">Genres you share</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {overlap.sharedGenres.map((genre) => (
+                                <span key={genre} className="text-xs bg-accent/10 text-accent px-2.5 py-1 rounded-full font-medium">
+                                  {genre}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Venn diagram */}
+                      <GenreVenn overlap={overlap} currentUserId={data.currentUserSpotifyId} />
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          )}
-
-          {/* Genre Venn diagrams */}
-          {data.tasteOverlaps.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary mb-3">Genre overlap</h3>
-              <div className="space-y-3">
-                {data.tasteOverlaps.map((overlap, i) => (
-                  <GenreVenn key={i} overlap={overlap} currentUserId={data.currentUserSpotifyId} />
-                ))}
               </div>
             </div>
           )}
