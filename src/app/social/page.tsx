@@ -130,231 +130,241 @@ export default function SocialPage() {
 
   const names = data.displayNames;
   const totalTracks = data.contributors.reduce((s, c) => s + c.trackCount, 0);
+  // Build a mosaic of album covers from all contributors' top artists
+  const allCovers = data.contributors.flatMap((c) =>
+    c.topArtists.filter((a) => a.imageUrl).map((a) => a.imageUrl!)
+  ).filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary mb-1">Social</h1>
-      <p className="text-sm text-text-secondary mb-10">Your collaborative playlists, together</p>
+      {/* Editorial header with album art mosaic */}
+      <div className="mb-12">
+        <div className="flex gap-1.5 mb-6 overflow-hidden rounded-lg h-16">
+          {allCovers.map((url, i) => (
+            <img key={i} src={url} alt="" className="h-full aspect-square object-cover first:rounded-l-lg last:rounded-r-lg" />
+          ))}
+          {allCovers.length < 6 && <div className="h-full flex-1 bg-surface-2 last:rounded-r-lg" />}
+        </div>
+        <h1 className="font-[family-name:var(--font-heading)] text-3xl font-bold text-text-primary tracking-tight">
+          {data.contributors.map((c) => dn(c.spotifyId, data.currentUserSpotifyId, names)).join(" & ")}
+        </h1>
+        <p className="text-text-secondary mt-1">
+          {totalTracks} tracks across {data.stats.playlistCount} playlist{data.stats.playlistCount !== 1 ? "s" : ""}
+        </p>
+      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-6 border-b border-border mb-8">
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`text-sm font-medium pb-2.5 transition-colors cursor-pointer ${
-            activeTab === "overview"
-              ? "text-text-primary border-b-2 border-text-primary -mb-px"
-              : "text-text-muted hover:text-text-secondary"
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab("activity")}
-          className={`text-sm font-medium pb-2.5 transition-colors cursor-pointer ${
-            activeTab === "activity"
-              ? "text-text-primary border-b-2 border-text-primary -mb-px"
-              : "text-text-muted hover:text-text-secondary"
-          }`}
-        >
-          Activity
-        </button>
+      {/* Tabs — underline */}
+      <div className="flex gap-6 border-b border-border-subtle mb-10">
+        {(["overview", "activity"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`text-sm pb-3 transition-colors cursor-pointer capitalize ${
+              activeTab === tab
+                ? "text-text-primary font-medium border-b-2 border-accent -mb-px"
+                : "text-text-muted hover:text-text-secondary"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {activeTab === "overview" && (
-        <div className="space-y-12">
-          {/* Contributors — side by side */}
-          <section>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {data.contributors.map((contributor, i) => {
-                const isYou = contributor.spotifyId === data.currentUserSpotifyId;
-                const pct = totalTracks > 0 ? Math.round((contributor.trackCount / totalTracks) * 100) : 0;
-                const isExpanded = expandedContributor === contributor.spotifyId;
+        <div>
+          {/* Contributors — asymmetric side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10 mb-16">
+            {data.contributors.map((contributor) => {
+              const pct = totalTracks > 0 ? Math.round((contributor.trackCount / totalTracks) * 100) : 0;
+              const isExpanded = expandedContributor === contributor.spotifyId;
+              const name = dn(contributor.spotifyId, data.currentUserSpotifyId, names);
 
-                return (
-                  <div key={contributor.spotifyId}>
-                    {/* Card header — always visible */}
+              return (
+                <div key={contributor.spotifyId}>
+                  {/* Name as editorial heading */}
+                  <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-text-primary mb-0.5">{name}</h2>
+                  <p className="text-sm text-text-muted mb-1">{contributor.trackCount} tracks · {pct}%</p>
+                  <p className="text-sm text-text-secondary italic mb-5">{personality(contributor)}</p>
+
+                  {/* Top artists — stacked album art */}
+                  {contributor.topArtists.length > 0 && (
                     <div className="mb-4">
-                      <div className="flex items-baseline gap-2 mb-0.5">
-                        <h3 className="font-[family-name:var(--font-heading)] text-lg font-bold text-text-primary">
-                          {dn(contributor.spotifyId, data.currentUserSpotifyId, names)}
-                        </h3>
-                        <span className="text-sm text-text-muted">{contributor.trackCount} tracks &middot; {pct}%</span>
-                      </div>
-                      <p className="text-xs text-text-secondary">{personality(contributor)}</p>
-                    </div>
-
-                    {/* Top 3 artists */}
-                    {contributor.topArtists.length > 0 && (
-                      <div className="space-y-1 mb-4">
-                        {contributor.topArtists.slice(0, 3).map((artist) => (
-                          <div key={artist.name} className="flex items-center gap-2.5">
-                            {artist.imageUrl ? (
-                              <img src={artist.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />
-                            ) : (
-                              <div className="w-8 h-8 rounded bg-surface-2" />
-                            )}
-                            <span className="text-sm text-text-primary truncate flex-1">{artist.name}</span>
-                            <span className="text-xs text-text-muted">{artist.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Genres as inline text */}
-                    {contributor.topGenres?.length > 0 && (
-                      <p className="text-xs text-text-muted mb-3">
-                        {contributor.topGenres.join(" · ")}
-                      </p>
-                    )}
-
-                    {/* Expand for more */}
-                    <button
-                      onClick={() => setExpandedContributor(isExpanded ? null : contributor.spotifyId)}
-                      className="text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
-                    >
-                      {isExpanded ? "Less" : "More details"}
-                    </button>
-
-                    {isExpanded && (
-                      <div className="mt-3 space-y-4 animate-in">
-                        {/* Remaining artists */}
-                        {contributor.topArtists.length > 3 && (
-                          <div className="space-y-1">
-                            {contributor.topArtists.slice(3).map((artist) => (
-                              <div key={artist.name} className="flex items-center gap-2.5">
-                                {artist.imageUrl ? (
-                                  <img src={artist.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded bg-surface-2" />
-                                )}
-                                <span className="text-sm text-text-primary truncate flex-1">{artist.name}</span>
-                                <span className="text-xs text-text-muted">{artist.count}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Decades */}
-                        {contributor.decades?.length > 0 && (
-                          <div className="flex gap-3">
-                            {contributor.decades.slice(0, 4).map((d) => (
-                              <div key={d.decade} className="text-center">
-                                <p className="text-sm font-semibold text-text-primary">{d.count}</p>
-                                <p className="text-xs text-text-muted">{d.decade}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Recent adds */}
-                        {contributor.recentAdds.length > 0 && (
+                      {/* #1 artist — featured large */}
+                      {contributor.topArtists[0] && (
+                        <div className="flex items-center gap-3 mb-3">
+                          {contributor.topArtists[0].imageUrl ? (
+                            <img src={contributor.topArtists[0].imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-lg bg-surface-2" />
+                          )}
                           <div>
-                            <p className="text-xs text-text-muted mb-2">Recently added</p>
-                            <div className="space-y-1.5">
-                              {contributor.recentAdds.map((add, j) => (
-                                <div key={j} className="flex items-center gap-2">
-                                  {add.albumImageUrl ? (
-                                    <img src={add.albumImageUrl} alt="" className="w-7 h-7 rounded" />
-                                  ) : (
-                                    <div className="w-7 h-7 rounded bg-surface-2" />
-                                  )}
-                                  <span className="text-xs text-text-primary truncate flex-1">{add.trackName}</span>
-                                  <span className="text-xs text-text-muted truncate">{add.artistName}</span>
-                                </div>
-                              ))}
-                            </div>
+                            <p className="text-base font-semibold text-text-primary">{contributor.topArtists[0].name}</p>
+                            <p className="text-xs text-text-muted">{contributor.topArtists[0].count} tracks</p>
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                        </div>
+                      )}
+                      {/* #2-3 artists — compact */}
+                      {contributor.topArtists.slice(1, 3).map((artist) => (
+                        <div key={artist.name} className="flex items-center gap-2.5 py-1.5">
+                          {artist.imageUrl ? (
+                            <img src={artist.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded bg-surface-2" />
+                          )}
+                          <span className="text-sm text-text-primary flex-1 truncate">{artist.name}</span>
+                          <span className="text-xs text-text-muted">{artist.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-          {/* Compatibility */}
+                  {/* Genres — quiet */}
+                  {contributor.topGenres?.length > 0 && (
+                    <p className="text-xs text-text-muted leading-relaxed mb-4">
+                      {contributor.topGenres.join(", ")}
+                    </p>
+                  )}
+
+                  {/* Expand */}
+                  <button
+                    onClick={() => setExpandedContributor(isExpanded ? null : contributor.spotifyId)}
+                    className="text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
+                  >
+                    {isExpanded ? "Show less" : "See all artists & recent adds"}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-4 pt-4 border-t border-border-subtle space-y-5 animate-in">
+                      {contributor.topArtists.length > 3 && (
+                        <div>
+                          {contributor.topArtists.slice(3).map((artist) => (
+                            <div key={artist.name} className="flex items-center gap-2.5 py-1.5">
+                              {artist.imageUrl ? (
+                                <img src={artist.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-surface-2" />
+                              )}
+                              <span className="text-sm text-text-primary flex-1 truncate">{artist.name}</span>
+                              <span className="text-xs text-text-muted">{artist.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {contributor.decades?.length > 0 && (
+                        <p className="text-xs text-text-muted">
+                          Eras: {contributor.decades.slice(0, 4).map((d) => `${d.decade} (${d.count})`).join(", ")}
+                        </p>
+                      )}
+
+                      {contributor.recentAdds.length > 0 && (
+                        <div>
+                          <p className="text-xs text-text-muted mb-2">Latest additions</p>
+                          {contributor.recentAdds.map((add, j) => (
+                            <div key={j} className="flex items-center gap-2 py-1">
+                              {add.albumImageUrl ? (
+                                <img src={add.albumImageUrl} alt="" className="w-7 h-7 rounded" />
+                              ) : (
+                                <div className="w-7 h-7 rounded bg-surface-2" />
+                              )}
+                              <span className="text-sm text-text-primary truncate flex-1">{add.trackName}</span>
+                              <span className="text-xs text-text-muted">{add.artistName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Compatibility — editorial section */}
           {data.tasteOverlaps.map((overlap, i) => {
             const nameA = dn(overlap.userA, data.currentUserSpotifyId, names);
             const nameB = dn(overlap.userB, data.currentUserSpotifyId, names);
             return (
-              <section key={i} className="border-t border-border pt-10">
-                {/* Score — simple inline */}
-                <div className="flex items-baseline gap-3 mb-1">
-                  <h2 className="font-[family-name:var(--font-heading)] text-lg font-bold text-text-primary">
-                    {nameA} & {nameB}
-                  </h2>
-                  <span className="text-sm text-accent font-semibold">{overlap.compatibilityScore}/100</span>
+              <section key={i} className="pt-10 border-t border-border-subtle">
+                {/* Score — editorial treatment */}
+                <div className="mb-10">
+                  <p className="text-xs text-text-muted uppercase tracking-widest mb-2">Compatibility</p>
+                  <div className="flex items-end gap-3">
+                    <span className="font-[family-name:var(--font-heading)] text-5xl font-black text-text-primary leading-none">
+                      {overlap.compatibilityScore}
+                    </span>
+                    <span className="text-sm text-text-muted mb-1">/100 — {compatLabel(overlap.compatibilityScore)}</span>
+                  </div>
                 </div>
-                <p className="text-sm text-text-secondary mb-8">{compatLabel(overlap.compatibilityScore)}</p>
 
-                {/* Shared artists — the hero */}
+                {/* Shared artists — visual hero, larger art */}
                 {overlap.sharedArtists.length > 0 && (
-                  <div className="mb-8">
-                    <p className="text-xs text-text-muted mb-3">Artists both contributed</p>
-                    <div className="flex gap-4">
+                  <div className="mb-10">
+                    <p className="text-xs text-text-muted uppercase tracking-widest mb-4">Both contributed</p>
+                    <div className="flex gap-5 overflow-x-auto pb-2">
                       {overlap.sharedArtists.map((artist) => (
-                        <div key={artist.name} className="text-center w-16 shrink-0">
+                        <div key={artist.name} className="shrink-0 w-20">
                           {artist.imageUrl ? (
-                            <img src={artist.imageUrl} alt="" className="w-14 h-14 rounded-full object-cover mx-auto mb-1.5" />
+                            <img src={artist.imageUrl} alt="" className="w-20 h-20 rounded-xl object-cover mb-2" />
                           ) : (
-                            <div className="w-14 h-14 rounded-full bg-surface-2 mx-auto mb-1.5" />
+                            <div className="w-20 h-20 rounded-xl bg-surface-2 mb-2" />
                           )}
-                          <p className="text-xs text-text-primary leading-tight truncate">{artist.name}</p>
+                          <p className="text-sm text-text-primary font-medium leading-tight">{artist.name}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Shared genres — inline text */}
+                {/* Shared genres */}
                 {overlap.sharedGenres.length > 0 && (
-                  <p className="text-xs text-text-muted mb-8">
-                    Genres in common: {overlap.sharedGenres.join(", ")}
+                  <p className="text-sm text-text-muted mb-10">
+                    Common ground: {overlap.sharedGenres.join(", ")}
                   </p>
                 )}
 
-                {/* Influence — simple sentences */}
+                {/* Influence — narrative */}
                 {(overlap.influenceAtoB.length > 0 || overlap.influenceBtoA.length > 0) && (
-                  <div className="space-y-4 mb-4">
-                    {overlap.influenceAtoB.length > 0 && (
-                      <div>
-                        <p className="text-xs text-text-muted mb-2">
-                          {nameA} introduced &rarr; {nameB} followed
-                        </p>
-                        <div className="flex gap-3">
-                          {overlap.influenceAtoB.map((a) => (
-                            <div key={a.artist} className="text-center w-14 shrink-0">
-                              {a.imageUrl ? (
-                                <img src={a.imageUrl} alt="" className="w-11 h-11 rounded-full object-cover mx-auto mb-1" />
-                              ) : (
-                                <div className="w-11 h-11 rounded-full bg-surface-2 mx-auto mb-1" />
-                              )}
-                              <p className="text-[11px] text-text-primary truncate">{a.artist}</p>
-                            </div>
-                          ))}
+                  <div className="mb-6">
+                    <p className="text-xs text-text-muted uppercase tracking-widest mb-5">Who influenced who</p>
+                    <div className="space-y-6">
+                      {overlap.influenceAtoB.length > 0 && (
+                        <div>
+                          <p className="text-sm text-text-secondary mb-3">
+                            <span className="font-semibold text-text-primary">{nameA}</span> put them on first, then <span className="font-semibold text-text-primary">{nameB}</span> added tracks too
+                          </p>
+                          <div className="flex gap-3">
+                            {overlap.influenceAtoB.map((a) => (
+                              <div key={a.artist} className="shrink-0">
+                                {a.imageUrl ? (
+                                  <img src={a.imageUrl} alt={a.artist} title={a.artist} className="w-12 h-12 rounded-lg object-cover" />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg bg-surface-2" title={a.artist} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {overlap.influenceBtoA.length > 0 && (
-                      <div>
-                        <p className="text-xs text-text-muted mb-2">
-                          {nameB} introduced &rarr; {nameA} followed
-                        </p>
-                        <div className="flex gap-3">
-                          {overlap.influenceBtoA.map((a) => (
-                            <div key={a.artist} className="text-center w-14 shrink-0">
-                              {a.imageUrl ? (
-                                <img src={a.imageUrl} alt="" className="w-11 h-11 rounded-full object-cover mx-auto mb-1" />
-                              ) : (
-                                <div className="w-11 h-11 rounded-full bg-surface-2 mx-auto mb-1" />
-                              )}
-                              <p className="text-[11px] text-text-primary truncate">{a.artist}</p>
-                            </div>
-                          ))}
+                      )}
+                      {overlap.influenceBtoA.length > 0 && (
+                        <div>
+                          <p className="text-sm text-text-secondary mb-3">
+                            <span className="font-semibold text-text-primary">{nameB}</span> put them on first, then <span className="font-semibold text-text-primary">{nameA}</span> added tracks too
+                          </p>
+                          <div className="flex gap-3">
+                            {overlap.influenceBtoA.map((a) => (
+                              <div key={a.artist} className="shrink-0">
+                                {a.imageUrl ? (
+                                  <img src={a.imageUrl} alt={a.artist} title={a.artist} className="w-12 h-12 rounded-lg object-cover" />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg bg-surface-2" title={a.artist} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
               </section>
@@ -367,41 +377,34 @@ export default function SocialPage() {
       {activeTab === "activity" && (
         <div>
           {data.activityTimeline.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="text-text-secondary">No changes detected yet</p>
-              <p className="text-sm text-text-muted mt-1">Sync your playlists to start tracking activity.</p>
+            <div className="py-20">
+              <p className="text-text-secondary">Nothing yet.</p>
+              <p className="text-sm text-text-muted mt-1">Sync your playlists to start tracking changes.</p>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div>
               {data.activityTimeline.map((change, i) => (
                 <div
                   key={change.id}
-                  className="flex items-center gap-3 py-3 animate-in"
-                  style={{ animationDelay: `${i * 30}ms` }}
+                  className="flex items-start gap-3 py-3.5 border-b border-border-subtle last:border-0 animate-in"
+                  style={{ animationDelay: `${i * 25}ms` }}
                 >
                   {change.albumImageUrl ? (
-                    <img src={change.albumImageUrl} alt="" className="w-9 h-9 rounded" />
+                    <img src={change.albumImageUrl} alt="" className="w-10 h-10 rounded mt-0.5" />
                   ) : (
-                    <div className="w-9 h-9 rounded bg-surface-2" />
+                    <div className="w-10 h-10 rounded bg-surface-2 mt-0.5" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text-primary">
-                      <span className="font-medium">
+                    <p className="text-sm text-text-primary leading-snug">
+                      <span className="font-semibold">
                         {dn(change.changedBySpotifyId ?? "Unknown", data.currentUserSpotifyId, names)}
                       </span>{" "}
                       {change.changeType === "ADDED" ? "added" : "removed"}{" "}
                       <span className="font-medium">{change.trackName}</span>
-                      <span className="text-text-muted"> by {change.artistName}</span>
+                      <span className="text-text-muted font-normal"> by {change.artistName}</span>
                     </p>
-                    <p className="text-xs text-text-muted">
-                      <button
-                        className="hover:text-text-secondary transition-colors cursor-pointer"
-                        onClick={() => router.push(`/playlist/${change.playlistId}`)}
-                      >
-                        {change.playlistName}
-                      </button>
-                      {" · "}
-                      {format(new Date(change.detectedAt), "MMM d")}
+                    <p className="text-xs text-text-muted mt-0.5">
+                      {change.playlistName} · {format(new Date(change.detectedAt), "MMM d")}
                     </p>
                   </div>
                   <ChangeBadge type={change.changeType} />
