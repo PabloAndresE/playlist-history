@@ -7,9 +7,6 @@ import { format } from "date-fns";
 import ChangeBadge from "@/components/ui/Changebadge";
 import { SkeletonList, SkeletonStats, SkeletonBlock } from "@/components/ui/Skeleton";
 import Link from "next/link";
-import {
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell,
-} from "recharts";
 
 interface ContributorStats {
   spotifyId: string;
@@ -98,45 +95,47 @@ function GenreButterfly({ overlap, currentUserId, names }: { overlap: TasteOverl
 
   if (raw.length === 0) return null;
 
-  // Transform: userA goes negative (left), userB positive (right)
-  const data = raw.map((d) => ({
-    genre: d.genre,
-    left: -d.userA,
-    right: d.userB,
-    shared: d.userA > 0 && d.userB > 0,
-  }));
-
   return (
-    <div className="bg-surface-1 border-t border-border-subtle px-4 py-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-surface-1 border-t border-border-subtle px-4 py-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-semibold text-purple">{nameA}</p>
         <p className="text-xs font-semibold text-text-secondary">Genres</p>
         <p className="text-xs font-semibold text-accent">{nameB}</p>
       </div>
-      <ResponsiveContainer width="100%" height={raw.length * 32 + 8}>
-        <BarChart data={data} layout="vertical" margin={{ left: 0, right: 0, top: 0, bottom: 0 }} barGap={0}>
-          <XAxis type="number" hide domain={[-100, 100]} />
-          <YAxis
-            type="category"
-            dataKey="genre"
-            width={70}
-            tick={{ fontSize: 10, fill: "var(--color-text-muted)" }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Bar dataKey="left" stackId="a" barSize={14} radius={[4, 0, 0, 4]}>
-            {data.map((entry, i) => (
-              <Cell key={i} fill={entry.shared ? "rgb(139, 92, 246)" : "rgba(139, 92, 246, 0.4)"} />
-            ))}
-          </Bar>
-          <Bar dataKey="right" stackId="a" barSize={14} radius={[0, 4, 4, 0]}>
-            {data.map((entry, i) => (
-              <Cell key={i} fill={entry.shared ? "rgb(34, 197, 94)" : "rgba(34, 197, 94, 0.4)"} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-      <p className="text-[10px] text-text-muted text-center mt-2">Bright = both listen &middot; Faded = only one</p>
+      {/* Bars */}
+      <div className="space-y-2">
+        {raw.map((d) => {
+          const shared = d.userA > 0 && d.userB > 0;
+          return (
+            <div key={d.genre} className="flex items-center gap-2">
+              {/* Left bar (userA) — grows right-to-left */}
+              <div className="flex-1 flex justify-end">
+                <div
+                  className="h-3 rounded-l-full transition-all"
+                  style={{
+                    width: `${d.userA}%`,
+                    backgroundColor: shared ? "rgb(139, 92, 246)" : "rgba(139, 92, 246, 0.3)",
+                  }}
+                />
+              </div>
+              {/* Genre label */}
+              <p className="w-20 text-center text-[10px] text-text-muted font-medium shrink-0 truncate">{d.genre}</p>
+              {/* Right bar (userB) — grows left-to-right */}
+              <div className="flex-1">
+                <div
+                  className="h-3 rounded-r-full transition-all"
+                  style={{
+                    width: `${d.userB}%`,
+                    backgroundColor: shared ? "rgb(34, 197, 94)" : "rgba(34, 197, 94, 0.3)",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-text-muted text-center mt-3">Bright = both contributed &middot; Faded = only one</p>
     </div>
   );
 }
