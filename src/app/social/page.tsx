@@ -88,7 +88,7 @@ function compatLabel(score: number): { text: string; emoji: string; gradient: st
   return { text: "Different vibes", emoji: "seedling", gradient: "from-rose-400 to-pink-400" };
 }
 
-function GenreButterfly({ overlap, currentUserId, names }: { overlap: TasteOverlap; currentUserId?: string; names?: Record<string, string> }) {
+function GenreComparison({ overlap, currentUserId, names }: { overlap: TasteOverlap; currentUserId?: string; names?: Record<string, string> }) {
   const nameA = displayName(overlap.userA, currentUserId, names);
   const nameB = displayName(overlap.userB, currentUserId, names);
   const raw = overlap.radarGenres ?? [];
@@ -96,46 +96,29 @@ function GenreButterfly({ overlap, currentUserId, names }: { overlap: TasteOverl
   if (raw.length === 0) return null;
 
   return (
-    <div className="bg-surface-1 border-t border-border-subtle px-4 py-5">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold text-purple">{nameA}</p>
-        <p className="text-xs font-semibold text-text-secondary">Genres</p>
-        <p className="text-xs font-semibold text-accent">{nameB}</p>
+    <div className="bg-surface-1 border-t border-border-subtle px-4 py-4">
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 mb-3">
+        <span className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+          <span className="w-2.5 h-2.5 rounded-full bg-purple inline-block" /> {nameA}
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+          <span className="w-2.5 h-2.5 rounded-full bg-accent inline-block" /> {nameB}
+        </span>
       </div>
-      {/* Bars */}
-      <div className="space-y-2">
-        {raw.map((d) => {
-          const shared = d.userA > 0 && d.userB > 0;
-          return (
-            <div key={d.genre} className="flex items-center gap-2">
-              {/* Left bar (userA) — grows right-to-left */}
-              <div className="flex-1 flex justify-end">
-                <div
-                  className="h-3 rounded-l-full transition-all"
-                  style={{
-                    width: `${d.userA}%`,
-                    backgroundColor: shared ? "rgb(139, 92, 246)" : "rgba(139, 92, 246, 0.3)",
-                  }}
-                />
-              </div>
-              {/* Genre label */}
-              <p className="w-20 text-center text-[10px] text-text-muted font-medium shrink-0 truncate">{d.genre}</p>
-              {/* Right bar (userB) — grows left-to-right */}
-              <div className="flex-1">
-                <div
-                  className="h-3 rounded-r-full transition-all"
-                  style={{
-                    width: `${d.userB}%`,
-                    backgroundColor: shared ? "rgb(34, 197, 94)" : "rgba(34, 197, 94, 0.3)",
-                  }}
-                />
-              </div>
+      {/* Genre rows */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+        {raw.map((d) => (
+          <div key={d.genre} className="flex items-center gap-2">
+            {/* Dots */}
+            <div className="flex gap-0.5 shrink-0">
+              <span className={`w-2 h-2 rounded-full ${d.userA > 0 ? "bg-purple" : "bg-surface-3"}`} />
+              <span className={`w-2 h-2 rounded-full ${d.userB > 0 ? "bg-accent" : "bg-surface-3"}`} />
             </div>
-          );
-        })}
+            <span className="text-xs text-text-primary truncate">{d.genre}</span>
+          </div>
+        ))}
       </div>
-      <p className="text-[10px] text-text-muted text-center mt-3">Bright = both contributed &middot; Faded = only one</p>
     </div>
   );
 }
@@ -435,7 +418,7 @@ export default function SocialPage() {
                       </div>
 
                       {/* Radar chart */}
-                      <GenreButterfly overlap={overlap} currentUserId={data.currentUserSpotifyId} names={data.displayNames} />
+                      <GenreComparison overlap={overlap} currentUserId={data.currentUserSpotifyId} names={data.displayNames} />
                     </div>
                   );
                 })}
