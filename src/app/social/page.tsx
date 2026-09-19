@@ -22,6 +22,8 @@ interface TasteOverlap {
   userB: string;
   sharedArtists: string[];
   sharedGenres: string[];
+  onlyGenresA: string[];
+  onlyGenresB: string[];
   compatibilityScore: number;
 }
 
@@ -75,6 +77,54 @@ function compatLabel(score: number): { text: string; color: string } {
   if (score >= 50) return { text: "Great match", color: "text-accent" };
   if (score >= 30) return { text: "Some overlap", color: "text-amber-600" };
   return { text: "Different vibes", color: "text-rose-500" };
+}
+
+function GenreVenn({ overlap, currentUserId }: { overlap: TasteOverlap; currentUserId?: string }) {
+  const nameA = displayName(overlap.userA, currentUserId);
+  const nameB = displayName(overlap.userB, currentUserId);
+  const onlyA = overlap.onlyGenresA ?? [];
+  const onlyB = overlap.onlyGenresB ?? [];
+  const shared = overlap.sharedGenres;
+
+  return (
+    <div className="bg-surface-1 rounded-xl border border-border-subtle p-5">
+      <h4 className="text-xs font-semibold text-text-secondary mb-4 text-center">
+        {nameA} vs {nameB} — Genre Venn
+      </h4>
+      <svg viewBox="0 0 400 220" className="w-full max-w-md mx-auto" aria-label={`Genre overlap between ${nameA} and ${nameB}`}>
+        {/* Left circle */}
+        <circle cx="150" cy="110" r="95" fill="rgba(139, 92, 246, 0.12)" stroke="rgba(139, 92, 246, 0.4)" strokeWidth="1.5" />
+        {/* Right circle */}
+        <circle cx="250" cy="110" r="95" fill="rgba(34, 197, 94, 0.12)" stroke="rgba(34, 197, 94, 0.4)" strokeWidth="1.5" />
+
+        {/* Left label */}
+        <text x="95" y="28" textAnchor="middle" className="fill-purple text-[11px] font-semibold">{nameA}</text>
+
+        {/* Right label */}
+        <text x="305" y="28" textAnchor="middle" className="fill-accent text-[11px] font-semibold">{nameB}</text>
+
+        {/* Only A genres */}
+        {onlyA.slice(0, 4).map((g, i) => (
+          <text key={`a-${g}`} x="100" y={65 + i * 18} textAnchor="middle" className="fill-purple text-[10px]">{g}</text>
+        ))}
+
+        {/* Shared genres */}
+        {shared.slice(0, 4).map((g, i) => (
+          <text key={`s-${g}`} x="200" y={75 + i * 18} textAnchor="middle" className="fill-text-primary text-[10px] font-medium">{g}</text>
+        ))}
+
+        {/* Only B genres */}
+        {onlyB.slice(0, 4).map((g, i) => (
+          <text key={`b-${g}`} x="300" y={65 + i * 18} textAnchor="middle" className="fill-accent text-[10px]">{g}</text>
+        ))}
+
+        {/* Center count if many shared */}
+        {shared.length > 4 && (
+          <text x="200" y={75 + 4 * 18} textAnchor="middle" className="fill-text-muted text-[9px]">+{shared.length - 4} more</text>
+        )}
+      </svg>
+    </div>
+  );
 }
 
 export default function SocialPage() {
@@ -187,10 +237,10 @@ export default function SocialPage() {
 
       {activeTab === "overview" && (
         <div className="space-y-8">
-          {/* Contributors — who added what */}
+          {/* Contributors — side by side */}
           <div>
             <h3 className="text-sm font-semibold text-text-primary mb-3">Contributors</h3>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {data.contributors.map((contributor, i) => {
                 const isYou = contributor.spotifyId === data.currentUserSpotifyId;
                 const pct = totalTracks > 0 ? Math.round((contributor.trackCount / totalTracks) * 100) : 0;
@@ -365,6 +415,18 @@ export default function SocialPage() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Genre Venn diagrams */}
+          {data.tasteOverlaps.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary mb-3">Genre overlap</h3>
+              <div className="space-y-3">
+                {data.tasteOverlaps.map((overlap, i) => (
+                  <GenreVenn key={i} overlap={overlap} currentUserId={data.currentUserSpotifyId} />
+                ))}
               </div>
             </div>
           )}

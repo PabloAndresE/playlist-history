@@ -18,6 +18,8 @@ interface TasteOverlap {
   userB: string;
   sharedArtists: string[];
   sharedGenres: string[];
+  onlyGenresA: string[];
+  onlyGenresB: string[];
   compatibilityScore: number;
 }
 
@@ -203,11 +205,15 @@ export async function GET() {
       const score = Math.round(artistOverlap * 60 + genreOverlap * 40);
 
       if (sharedArtists.length > 0 || sharedGenres.length > 0) {
+        const onlyGenresA = [...genresA].filter((g) => !genresB.has(g)).slice(0, 6);
+        const onlyGenresB = [...genresB].filter((g) => !genresA.has(g)).slice(0, 6);
         tasteOverlaps.push({
           userA: contributorIds[i],
           userB: contributorIds[j],
           sharedArtists: sharedArtists.slice(0, 5),
-          sharedGenres: sharedGenres.slice(0, 5),
+          sharedGenres: sharedGenres.slice(0, 6),
+          onlyGenresA,
+          onlyGenresB,
           compatibilityScore: score,
         });
       }
