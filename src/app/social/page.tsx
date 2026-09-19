@@ -178,11 +178,8 @@ export default function SocialPage() {
                 const isExpanded = expandedContributor === contributor.spotifyId;
 
                 return (
-                  <div key={contributor.spotifyId}>
-                    <button
-                      onClick={() => setExpandedContributor(isExpanded ? null : contributor.spotifyId)}
-                      className="w-full text-left bg-surface-1 rounded-xl border border-border-subtle p-4 hover:bg-surface-2 transition-colors cursor-pointer"
-                    >
+                  <div key={contributor.spotifyId} className="bg-surface-1 rounded-xl border border-border-subtle">
+                    <div className="p-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full ${getColor(i)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
                           {isYou ? "Y" : contributor.spotifyId.charAt(0).toUpperCase()}
@@ -197,58 +194,58 @@ export default function SocialPage() {
                             )}
                           </div>
                           <p className="text-xs text-text-muted">
-                            {contributor.trackCount} tracks &middot; {pct}% of total
+                            {contributor.trackCount} tracks &middot; {pct}% of total &middot; {contributor.playlists.length} playlist{contributor.playlists.length !== 1 ? "s" : ""}
                           </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-xs text-text-muted">{contributor.playlists.length} playlist{contributor.playlists.length !== 1 ? "s" : ""}</p>
-                          <svg className={`w-4 h-4 text-text-muted mx-auto mt-1 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
                         </div>
                       </div>
                       {/* Bar */}
                       <div className="mt-3 h-1.5 bg-surface-3 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${getColor(i)} transition-all`} style={{ width: `${pct}%` }} />
                       </div>
-                    </button>
-
-                    {/* Expanded: top artists + recent adds */}
-                    {isExpanded && (
-                      <div className="mt-1 ml-4 mr-1 bg-surface-1 rounded-xl border border-border-subtle p-4 space-y-4 animate-in">
-                        {contributor.topArtists.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-text-secondary mb-2">Top artists</p>
-                            <div className="flex flex-wrap gap-2">
-                              {contributor.topArtists.map((artist) => (
-                                <span key={artist.name} className="text-xs bg-surface-2 text-text-primary px-2.5 py-1 rounded-lg">
-                                  {artist.name} <span className="text-text-muted">({artist.count})</span>
-                                </span>
-                              ))}
-                            </div>
+                      {/* Top 5 artists — always visible */}
+                      {contributor.topArtists.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs font-semibold text-text-secondary mb-1.5">Top artists</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {contributor.topArtists.map((artist, rank) => (
+                              <span key={artist.name} className="inline-flex items-center gap-1 text-xs bg-surface-2 text-text-primary px-2 py-1 rounded-lg">
+                                <span className="text-text-muted font-medium">{rank + 1}.</span> {artist.name} <span className="text-text-muted">({artist.count})</span>
+                              </span>
+                            ))}
                           </div>
-                        )}
-                        {contributor.recentAdds.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-text-secondary mb-2">Recent adds</p>
-                            <div className="space-y-1.5">
-                              {contributor.recentAdds.map((add, j) => (
-                                <div key={j} className="flex items-center gap-2">
-                                  {add.albumImageUrl ? (
-                                    <img src={add.albumImageUrl} alt="" className="w-7 h-7 rounded" />
-                                  ) : (
-                                    <div className="w-7 h-7 rounded bg-surface-2" />
-                                  )}
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-xs text-text-primary truncate">{add.trackName}</p>
-                                    <p className="text-xs text-text-muted truncate">{add.artistName}</p>
-                                  </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Expandable recent adds */}
+                    {contributor.recentAdds.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => setExpandedContributor(isExpanded ? null : contributor.spotifyId)}
+                          className="w-full flex items-center justify-center gap-1 py-2 border-t border-border-subtle text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+                        >
+                          {isExpanded ? "Hide" : "Show"} recent adds
+                          <svg className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {isExpanded && (
+                          <div className="px-4 pb-4 space-y-1.5 animate-in">
+                            {contributor.recentAdds.map((add, j) => (
+                              <div key={j} className="flex items-center gap-2">
+                                {add.albumImageUrl ? (
+                                  <img src={add.albumImageUrl} alt="" className="w-7 h-7 rounded" />
+                                ) : (
+                                  <div className="w-7 h-7 rounded bg-surface-2" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs text-text-primary truncate">{add.trackName}</p>
+                                  <p className="text-xs text-text-muted truncate">{add.artistName}</p>
                                 </div>
-                              ))}
-                            </div>
+                              </div>
+                            ))}
                           </div>
                         )}
-                      </div>
+                      </>
                     )}
                   </div>
                 );
