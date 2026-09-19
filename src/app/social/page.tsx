@@ -103,9 +103,32 @@ export default function SocialPage() {
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-12">
-        <SkeletonBlock className="h-8 w-32 mb-2" />
-        <SkeletonBlock className="h-4 w-64 mb-10" />
-        <SkeletonList rows={3} />
+        {/* Mosaic skeleton */}
+        <div className="flex gap-1.5 mb-6 h-16">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonBlock key={i} className="h-full aspect-square rounded" />
+          ))}
+        </div>
+        <SkeletonBlock className="h-8 w-48 mb-2" />
+        <SkeletonBlock className="h-4 w-64 mb-12" />
+        {/* Two-column contributor skeletons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          {[0, 1].map((i) => (
+            <div key={i} className="space-y-3">
+              <SkeletonBlock className="h-6 w-24" />
+              <SkeletonBlock className="h-4 w-40" />
+              <SkeletonBlock className="h-4 w-32" />
+              <div className="space-y-2 mt-4">
+                {[0, 1, 2].map((j) => (
+                  <div key={j} className="flex items-center gap-2.5">
+                    <SkeletonBlock className="w-8 h-8 rounded shrink-0" />
+                    <SkeletonBlock className="h-4 flex-1" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -228,7 +251,8 @@ export default function SocialPage() {
                   {/* Expand */}
                   <button
                     onClick={() => setExpandedContributor(isExpanded ? null : contributor.spotifyId)}
-                    className="text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
+                    className="text-sm text-accent hover:text-accent-hover transition-colors cursor-pointer py-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded"
+                    aria-expanded={isExpanded}
                   >
                     {isExpanded ? "Show less" : "See all artists & recent adds"}
                   </button>
