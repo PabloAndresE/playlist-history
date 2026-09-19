@@ -11,7 +11,8 @@ import Link from "next/link";
 interface ContributorStats {
   spotifyId: string;
   trackCount: number;
-  topArtists: { name: string; count: number }[];
+  topArtists: { name: string; count: number; imageUrl: string | null }[];
+  topGenres: string[];
   recentAdds: { trackName: string; artistName: string; albumImageUrl: string | null; addedAt: string }[];
   playlists: string[];
 }
@@ -20,7 +21,8 @@ interface TasteOverlap {
   userA: string;
   userB: string;
   sharedArtists: string[];
-  overlapPercent: number;
+  sharedGenres: string[];
+  compatibilityScore: number;
 }
 
 interface ActivityItem {
@@ -50,12 +52,29 @@ const COLORS = [
   "bg-rose-500", "bg-sky-500", "bg-orange-500", "bg-indigo-500",
 ];
 
+const GENRE_COLORS = [
+  "bg-purple/15 text-purple", "bg-accent/15 text-accent",
+  "bg-amber-500/15 text-amber-700", "bg-emerald-500/15 text-emerald-700",
+  "bg-rose-500/15 text-rose-700",
+];
+
 function getColor(index: number) {
   return COLORS[index % COLORS.length];
 }
 
+function getGenreColor(index: number) {
+  return GENRE_COLORS[index % GENRE_COLORS.length];
+}
+
 function displayName(spotifyId: string, currentUserId?: string) {
   return spotifyId === currentUserId ? "You" : spotifyId;
+}
+
+function compatLabel(score: number): { text: string; color: string } {
+  if (score >= 70) return { text: "Soulmates", color: "text-emerald-600" };
+  if (score >= 50) return { text: "Great match", color: "text-accent" };
+  if (score >= 30) return { text: "Some overlap", color: "text-amber-600" };
+  return { text: "Different vibes", color: "text-rose-500" };
 }
 
 export default function SocialPage() {
@@ -180,7 +199,8 @@ export default function SocialPage() {
                 return (
                   <div key={contributor.spotifyId} className="bg-surface-1 rounded-xl border border-border-subtle">
                     <div className="p-4">
-                      <div className="flex items-center gap-3">
+                      {/* Header */}
+                      <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-full ${getColor(i)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
                           {isYou ? "Y" : contributor.spotifyId.charAt(0).toUpperCase()}
                         </div>
@@ -194,22 +214,52 @@ export default function SocialPage() {
                             )}
                           </div>
                           <p className="text-xs text-text-muted">
-                            {contributor.trackCount} tracks &middot; {pct}% of total &middot; {contributor.playlists.length} playlist{contributor.playlists.length !== 1 ? "s" : ""}
+                            {contributor.trackCount} tracks &middot; {pct}% of total
                           </p>
                         </div>
                       </div>
-                      {/* Bar */}
-                      <div className="mt-3 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                      {/* Progress bar */}
+                      <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden mb-4">
                         <div className={`h-full rounded-full ${getColor(i)} transition-all`} style={{ width: `${pct}%` }} />
                       </div>
-                      {/* Top 5 artists — always visible */}
+                      {/* Top 5 artists — visual list with images */}
                       {contributor.topArtists.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs font-semibold text-text-secondary mb-1.5">Top artists</p>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold text-text-secondary mb-2">Top 5 artists</p>
+                          <div className="space-y-1.5">
                             {contributor.topArtists.map((artist, rank) => (
-                              <span key={artist.name} className="inline-flex items-center gap-1 text-xs bg-surface-2 text-text-primary px-2 py-1 rounded-lg">
-                                <span className="text-text-muted font-medium">{rank + 1}.</span> {artist.name} <span className="text-text-muted">({artist.count})</span>
+                              <div key={artist.name} className="flex items-center gap-2.5">
+                                <span className={`w-5 text-center text-xs font-bold ${rank === 0 ? "text-amber-500" : rank === 1 ? "text-text-secondary" : rank === 2 ? "text-amber-700" : "text-text-muted"}`}>
+                                  {rank === 0 ? "#1" : rank + 1}
+                                </span>
+                                {artist.imageUrl ? (
+                                  <img src={artist.imageUrl} alt="" className={`${rank === 0 ? "w-10 h-10" : "w-8 h-8"} rounded-lg object-cover`} />
+                                ) : (
+                                  <div className={`${rank === 0 ? "w-10 h-10" : "w-8 h-8"} rounded-lg bg-surface-2 flex items-center justify-center`}>
+                                    <svg className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                                    </svg>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className={`${rank === 0 ? "text-sm font-semibold" : "text-xs font-medium"} text-text-primary truncate`}>{artist.name}</p>
+                                </div>
+                                <span className={`${rank === 0 ? "text-sm font-bold" : "text-xs"} text-text-muted shrink-0`}>
+                                  {artist.count} {artist.count === 1 ? "track" : "tracks"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Genres */}
+                      {contributor.topGenres?.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-text-secondary mb-1.5">Genres</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {contributor.topGenres.map((genre, gi) => (
+                              <span key={genre} className={`text-xs px-2 py-0.5 rounded-full font-medium ${getGenreColor(gi)}`}>
+                                {genre}
                               </span>
                             ))}
                           </div>
@@ -253,40 +303,68 @@ export default function SocialPage() {
             </div>
           </div>
 
-          {/* Taste Comparison */}
+          {/* Compatibility */}
           {data.tasteOverlaps.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-text-primary mb-3">Taste comparison</h3>
+              <h3 className="text-sm font-semibold text-text-primary mb-3">Compatibility</h3>
               <div className="space-y-3">
-                {data.tasteOverlaps.map((overlap, i) => (
-                  <div key={i} className="bg-surface-1 rounded-xl border border-border-subtle p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="font-medium text-purple">
-                          {displayName(overlap.userA, data.currentUserSpotifyId)}
-                        </span>
-                        <span className="text-text-muted">&</span>
-                        <span className="font-medium text-accent">
-                          {displayName(overlap.userB, data.currentUserSpotifyId)}
-                        </span>
+                {data.tasteOverlaps.map((overlap, i) => {
+                  const label = compatLabel(overlap.compatibilityScore);
+                  return (
+                    <div key={i} className="bg-surface-1 rounded-xl border border-border-subtle p-5">
+                      {/* Score header */}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-medium text-purple">
+                            {displayName(overlap.userA, data.currentUserSpotifyId)}
+                          </span>
+                          <span className="text-text-muted">&times;</span>
+                          <span className="font-medium text-accent">
+                            {displayName(overlap.userB, data.currentUserSpotifyId)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">{overlap.compatibilityScore}</span>
+                          <span className="text-xs text-text-muted ml-0.5">/100</span>
+                        </div>
                       </div>
-                      <span className="text-sm font-bold text-text-primary">{overlap.overlapPercent}% overlap</span>
+                      <p className={`text-xs font-semibold ${label.color} mb-3`}>{label.text}</p>
+                      {/* Progress */}
+                      <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden mb-4">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-purple via-accent to-emerald-500 transition-all"
+                          style={{ width: `${overlap.compatibilityScore}%` }}
+                        />
+                      </div>
+                      {/* Shared artists */}
+                      {overlap.sharedArtists.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs text-text-muted mb-1.5">Artists in common</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {overlap.sharedArtists.map((artist) => (
+                              <span key={artist} className="text-xs bg-purple/10 text-purple px-2 py-0.5 rounded-full font-medium">
+                                {artist}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Shared genres */}
+                      {overlap.sharedGenres.length > 0 && (
+                        <div>
+                          <p className="text-xs text-text-muted mb-1.5">Genres in common</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {overlap.sharedGenres.map((genre) => (
+                              <span key={genre} className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full font-medium">
+                                {genre}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="h-2 bg-surface-3 rounded-full overflow-hidden mb-3">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-purple to-accent transition-all"
-                        style={{ width: `${overlap.overlapPercent}%` }}
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {overlap.sharedArtists.map((artist) => (
-                        <span key={artist} className="text-xs bg-surface-2 text-text-secondary px-2 py-0.5 rounded-md">
-                          {artist}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

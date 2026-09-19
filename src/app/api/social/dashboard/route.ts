@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NormalizedTrack } from "@/lib/spotify";
+import { getGenresForArtists } from "@/lib/lastfm";
 
 interface ContributorStats {
   spotifyId: string;
   trackCount: number;
-  topArtists: { name: string; count: number }[];
+  topArtists: { name: string; count: number; imageUrl: string | null }[];
   topGenres: string[];
   recentAdds: { trackName: string; artistName: string; albumImageUrl: string | null; addedAt: string }[];
   playlists: string[];
@@ -16,7 +17,8 @@ interface TasteOverlap {
   userA: string;
   userB: string;
   sharedArtists: string[];
-  overlapPercent: number;
+  sharedGenres: string[];
+  compatibilityScore: number;
 }
 
 export async function GET() {
@@ -129,21 +131,30 @@ export async function GET() {
 
   const playlistIds = collabPlaylists.map((p) => p.id);
 
-  // Compute top artists per contributor and artist sets for taste overlap
+  // Compute top artists per contributor (with images) and artist sets for taste overlap
   const contributorArtistSets = new Map<string, Set<string>>();
+  const allArtistNames = new Set<string>();
 
   for (const [id, contributor] of filteredContributorMap) {
-    // Count artists
-    const artistCounts = new Map<string, number>();
+    // Count artists and track best image per artist
+    const artistCounts = new Map<string, { count: number; imageUrl: string | null }>();
     for (const add of contributor.recentAdds) {
-      artistCounts.set(add.artistName, (artistCounts.get(add.artistName) ?? 0) + 1);
+      const existing = artistCounts.get(add.artistName);
+      if (existing) {
+        existing.count++;
+        if (!existing.imageUrl && add.albumImageUrl) existing.imageUrl = add.albumImageUrl;
+      } else {
+        artistCounts.set(add.artistName, { count: 1, imageUrl: add.albumImageUrl });
+      }
     }
     contributor.topArtists = [...artistCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 5)
-      .map(([name, count]) => ({ name, count }));
+      .map(([name, { count, imageUrl }]) => ({ name, count, imageUrl }));
 
-    contributorArtistSets.set(id, new Set(artistCounts.keys()));
+    const artistSet = new Set(artistCounts.keys());
+    contributorArtistSets.set(id, artistSet);
+    for (const name of artistSet) allArtistNames.add(name);
 
     // Keep only 5 most recent adds
     contributor.recentAdds = contributor.recentAdds
@@ -151,26 +162,58 @@ export async function GET() {
       .slice(0, 5);
   }
 
-  // Compute taste overlaps between pairs
+  // Fetch genres from Last.fm for all artists (batched, uses cache)
+  const genreMap = await getGenresForArtists([...allArtistNames]);
+
+  // Assign top genres per contributor
+  const contributorGenreSets = new Map<string, Set<string>>();
+  for (const [id, contributor] of filteredContributorMap) {
+    const genreCounts = new Map<string, number>();
+    const artistSet = contributorArtistSets.get(id)!;
+    for (const artistName of artistSet) {
+      const genres = genreMap.get(artistName) ?? [];
+      for (const g of genres) {
+        genreCounts.set(g, (genreCounts.get(g) ?? 0) + 1);
+      }
+    }
+    contributor.topGenres = [...genreCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name]) => name);
+    contributorGenreSets.set(id, new Set(genreCounts.keys()));
+  }
+
+  // Compute compatibility between pairs (artists 60% + genres 40%)
   const contributorIds = [...filteredContributorMap.keys()].filter((id) => id !== "unknown");
   const tasteOverlaps: TasteOverlap[] = [];
   for (let i = 0; i < contributorIds.length; i++) {
     for (let j = i + 1; j < contributorIds.length; j++) {
-      const setA = contributorArtistSets.get(contributorIds[i])!;
-      const setB = contributorArtistSets.get(contributorIds[j])!;
-      const shared = [...setA].filter((a) => setB.has(a));
-      if (shared.length > 0) {
-        const union = new Set([...setA, ...setB]);
+      const artistsA = contributorArtistSets.get(contributorIds[i])!;
+      const artistsB = contributorArtistSets.get(contributorIds[j])!;
+      const sharedArtists = [...artistsA].filter((a) => artistsB.has(a));
+      const artistUnion = new Set([...artistsA, ...artistsB]);
+      const artistOverlap = artistUnion.size > 0 ? sharedArtists.length / artistUnion.size : 0;
+
+      const genresA = contributorGenreSets.get(contributorIds[i]) ?? new Set();
+      const genresB = contributorGenreSets.get(contributorIds[j]) ?? new Set();
+      const sharedGenres = [...genresA].filter((g) => genresB.has(g));
+      const genreUnion = new Set([...genresA, ...genresB]);
+      const genreOverlap = genreUnion.size > 0 ? sharedGenres.length / genreUnion.size : 0;
+
+      const score = Math.round(artistOverlap * 60 + genreOverlap * 40);
+
+      if (sharedArtists.length > 0 || sharedGenres.length > 0) {
         tasteOverlaps.push({
           userA: contributorIds[i],
           userB: contributorIds[j],
-          sharedArtists: shared.slice(0, 8),
-          overlapPercent: Math.round((shared.length / union.size) * 100),
+          sharedArtists: sharedArtists.slice(0, 5),
+          sharedGenres: sharedGenres.slice(0, 5),
+          compatibilityScore: score,
         });
       }
     }
   }
-  tasteOverlaps.sort((a, b) => b.overlapPercent - a.overlapPercent);
+  tasteOverlaps.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
 
   // Recent changes as activity timeline
   const recentChanges = await prisma.playlistChange.findMany({
