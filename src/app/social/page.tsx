@@ -15,6 +15,10 @@ interface ContributorStats {
   topGenres: string[];
   recentAdds: { trackName: string; artistName: string; albumImageUrl: string | null; addedAt: string }[];
   playlists: string[];
+  superfanArtists: number;
+  explorerArtists: number;
+  mostRepeatedArtist: { name: string; count: number } | null;
+  decades: { decade: string; count: number }[];
 }
 
 interface TasteOverlap {
@@ -26,6 +30,8 @@ interface TasteOverlap {
   onlyGenresB: string[];
   radarGenres: { genre: string; userA: number; userB: number }[];
   compatibilityScore: number;
+  influenceAtoB: { artist: string; imageUrl: string | null }[];
+  influenceBtoA: { artist: string; imageUrl: string | null }[];
 }
 
 interface ActivityItem {
@@ -88,40 +94,6 @@ function compatLabel(score: number): { text: string; emoji: string; gradient: st
   return { text: "Different vibes", emoji: "seedling", gradient: "from-rose-400 to-pink-400" };
 }
 
-function GenreComparison({ overlap, currentUserId, names }: { overlap: TasteOverlap; currentUserId?: string; names?: Record<string, string> }) {
-  const nameA = displayName(overlap.userA, currentUserId, names);
-  const nameB = displayName(overlap.userB, currentUserId, names);
-  const raw = overlap.radarGenres ?? [];
-
-  if (raw.length === 0) return null;
-
-  return (
-    <div className="bg-surface-1 border-t border-border-subtle px-4 py-4">
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 mb-3">
-        <span className="flex items-center gap-1.5 text-[11px] text-text-secondary">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple inline-block" /> {nameA}
-        </span>
-        <span className="flex items-center gap-1.5 text-[11px] text-text-secondary">
-          <span className="w-2.5 h-2.5 rounded-full bg-accent inline-block" /> {nameB}
-        </span>
-      </div>
-      {/* Genre rows */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-        {raw.map((d) => (
-          <div key={d.genre} className="flex items-center gap-2">
-            {/* Dots */}
-            <div className="flex gap-0.5 shrink-0">
-              <span className={`w-2 h-2 rounded-full ${d.userA > 0 ? "bg-purple" : "bg-surface-3"}`} />
-              <span className={`w-2 h-2 rounded-full ${d.userB > 0 ? "bg-accent" : "bg-surface-3"}`} />
-            </div>
-            <span className="text-xs text-text-primary truncate">{d.genre}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function SocialPage() {
   const { status } = useSession();
@@ -311,6 +283,46 @@ export default function SocialPage() {
                           </div>
                         </div>
                       )}
+                      {/* Superfan vs Explorer + Decades */}
+                      <div className="flex gap-3 mt-1">
+                        {(contributor.superfanArtists > 0 || contributor.explorerArtists > 0) && (
+                          <div className="flex-1 bg-surface-2 rounded-lg p-2.5">
+                            <p className="text-[10px] font-semibold text-text-muted mb-1">
+                              {contributor.superfanArtists >= contributor.explorerArtists ? "Superfan" : "Explorer"}
+                            </p>
+                            <p className="text-xs text-text-primary">
+                              <span className="font-bold">{contributor.superfanArtists}</span> artist{contributor.superfanArtists !== 1 ? "s" : ""} with 3+ tracks
+                            </p>
+                            <p className="text-xs text-text-primary">
+                              <span className="font-bold">{contributor.explorerArtists}</span> with just 1
+                            </p>
+                            {contributor.mostRepeatedArtist && (
+                              <p className="text-[10px] text-text-muted mt-1">
+                                Most played: {contributor.mostRepeatedArtist.name} ({contributor.mostRepeatedArtist.count})
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {contributor.decades?.length > 0 && (
+                          <div className="flex-1 bg-surface-2 rounded-lg p-2.5">
+                            <p className="text-[10px] font-semibold text-text-muted mb-1">Decades</p>
+                            <div className="space-y-1">
+                              {contributor.decades.slice(0, 3).map((d) => (
+                                <div key={d.decade} className="flex items-center gap-1.5">
+                                  <span className="text-xs font-medium text-text-primary w-8">{d.decade}</span>
+                                  <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${getColor(i)}`}
+                                      style={{ width: `${Math.round((d.count / contributor.trackCount) * 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] text-text-muted w-6 text-right">{d.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {/* Expandable recent adds */}
                     {contributor.recentAdds.length > 0 && (
@@ -415,10 +427,53 @@ export default function SocialPage() {
                             </div>
                           </div>
                         )}
+                        {/* Playlist influence */}
+                        {(overlap.influenceAtoB.length > 0 || overlap.influenceBtoA.length > 0) && (
+                          <div>
+                            <p className="text-xs font-semibold text-text-secondary mb-2">Playlist influence</p>
+                            <div className="space-y-2">
+                              {overlap.influenceAtoB.length > 0 && (
+                                <div className="bg-surface-2 rounded-lg p-3">
+                                  <p className="text-[11px] text-text-muted mb-2">
+                                    <span className="font-semibold text-purple">{nameA}</span> introduced, <span className="font-semibold text-accent">{nameB}</span> followed
+                                  </p>
+                                  <div className="flex gap-2 overflow-x-auto">
+                                    {overlap.influenceAtoB.map((a) => (
+                                      <div key={a.artist} className="flex flex-col items-center gap-1 shrink-0 w-12">
+                                        {a.imageUrl ? (
+                                          <img src={a.imageUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                        ) : (
+                                          <div className="w-10 h-10 rounded-full bg-surface-3" />
+                                        )}
+                                        <p className="text-[9px] text-text-muted text-center truncate w-full">{a.artist}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {overlap.influenceBtoA.length > 0 && (
+                                <div className="bg-surface-2 rounded-lg p-3">
+                                  <p className="text-[11px] text-text-muted mb-2">
+                                    <span className="font-semibold text-accent">{nameB}</span> introduced, <span className="font-semibold text-purple">{nameA}</span> followed
+                                  </p>
+                                  <div className="flex gap-2 overflow-x-auto">
+                                    {overlap.influenceBtoA.map((a) => (
+                                      <div key={a.artist} className="flex flex-col items-center gap-1 shrink-0 w-12">
+                                        {a.imageUrl ? (
+                                          <img src={a.imageUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                        ) : (
+                                          <div className="w-10 h-10 rounded-full bg-surface-3" />
+                                        )}
+                                        <p className="text-[9px] text-text-muted text-center truncate w-full">{a.artist}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-
-                      {/* Radar chart */}
-                      <GenreComparison overlap={overlap} currentUserId={data.currentUserSpotifyId} names={data.displayNames} />
                     </div>
                   );
                 })}

@@ -11,6 +11,12 @@ interface ContributorStats {
   topGenres: string[];
   recentAdds: { trackName: string; artistName: string; albumImageUrl: string | null; addedAt: string }[];
   playlists: string[];
+  // Superfan vs Explorer
+  superfanArtists: number; // artists with 3+ tracks
+  explorerArtists: number; // artists with exactly 1 track
+  mostRepeatedArtist: { name: string; count: number } | null;
+  // Decade breakdown
+  decades: { decade: string; count: number }[];
 }
 
 interface TasteOverlap {
@@ -22,6 +28,9 @@ interface TasteOverlap {
   onlyGenresB: string[];
   radarGenres: { genre: string; userA: number; userB: number }[];
   compatibilityScore: number;
+  // Playlist influence: artists one person added first and the other followed
+  influenceAtoB: { artist: string; imageUrl: string | null }[];
+  influenceBtoA: { artist: string; imageUrl: string | null }[];
 }
 
 export async function GET() {
@@ -66,6 +75,8 @@ export async function GET() {
   const contributorMap = new Map<string, ContributorStats>();
   const playlistNameMap = new Map<string, string>();
   const playlistContributors = new Map<string, Set<string>>();
+  // Track raw data per contributor for decade + influence analysis
+  const contributorTracks = new Map<string, NormalizedTrack[]>();
   for (const p of allPlaylists) {
     playlistNameMap.set(p.id, p.name);
   }
@@ -88,6 +99,10 @@ export async function GET() {
           topGenres: [],
           recentAdds: [],
           playlists: [],
+          superfanArtists: 0,
+          explorerArtists: 0,
+          mostRepeatedArtist: null,
+          decades: [],
         };
         contributorMap.set(contributorId, contributor);
       }
@@ -101,6 +116,10 @@ export async function GET() {
         albumImageUrl: track.albumImageUrl,
         addedAt: track.addedAt,
       });
+
+      // Store raw track for decade/influence
+      if (!contributorTracks.has(contributorId)) contributorTracks.set(contributorId, []);
+      contributorTracks.get(contributorId)!.push(track);
     }
 
     playlistContributors.set(snapshot.trackedPlaylistId, contributors);
@@ -162,6 +181,34 @@ export async function GET() {
       allArtistNames.add(name);
       if (imageUrl && !globalArtistImages.has(name)) globalArtistImages.set(name, imageUrl);
     }
+
+    // Superfan vs Explorer
+    let superfan = 0, explorer = 0;
+    let mostRepeated: { name: string; count: number } | null = null;
+    for (const [name, { count }] of artistCounts) {
+      if (count >= 3) superfan++;
+      if (count === 1) explorer++;
+      if (!mostRepeated || count > mostRepeated.count) mostRepeated = { name, count };
+    }
+    contributor.superfanArtists = superfan;
+    contributor.explorerArtists = explorer;
+    contributor.mostRepeatedArtist = mostRepeated;
+
+    // Decade breakdown
+    const decadeCounts = new Map<string, number>();
+    const tracks = contributorTracks.get(id) ?? [];
+    for (const t of tracks) {
+      if (t.releaseDate) {
+        const year = parseInt(t.releaseDate.substring(0, 4));
+        if (!isNaN(year)) {
+          const decade = `${Math.floor(year / 10) * 10}s`;
+          decadeCounts.set(decade, (decadeCounts.get(decade) ?? 0) + 1);
+        }
+      }
+    }
+    contributor.decades = [...decadeCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([decade, count]) => ({ decade, count }));
 
     // Keep only 5 most recent adds
     contributor.recentAdds = contributor.recentAdds
@@ -235,6 +282,33 @@ export async function GET() {
           userB: Math.round(((countsB.get(genre) ?? 0) / maxCount) * 100),
         }));
 
+        // Playlist influence: who added an artist first and the other followed
+        const tracksA = contributorTracks.get(contributorIds[i]) ?? [];
+        const tracksB = contributorTracks.get(contributorIds[j]) ?? [];
+        const firstAddA = new Map<string, { date: Date; imageUrl: string | null }>();
+        const firstAddB = new Map<string, { date: Date; imageUrl: string | null }>();
+        for (const t of tracksA) {
+          const d = new Date(t.addedAt);
+          const existing = firstAddA.get(t.artistName);
+          if (!existing || d < existing.date) firstAddA.set(t.artistName, { date: d, imageUrl: t.albumImageUrl });
+        }
+        for (const t of tracksB) {
+          const d = new Date(t.addedAt);
+          const existing = firstAddB.get(t.artistName);
+          if (!existing || d < existing.date) firstAddB.set(t.artistName, { date: d, imageUrl: t.albumImageUrl });
+        }
+        // A influenced B: A added artist first, B added same artist later
+        const influenceAtoB: { artist: string; imageUrl: string | null }[] = [];
+        const influenceBtoA: { artist: string; imageUrl: string | null }[] = [];
+        for (const artist of sharedArtists) {
+          const a = firstAddA.get(artist);
+          const b = firstAddB.get(artist);
+          if (a && b) {
+            if (a.date < b.date) influenceAtoB.push({ artist, imageUrl: globalArtistImages.get(artist) ?? null });
+            else if (b.date < a.date) influenceBtoA.push({ artist, imageUrl: globalArtistImages.get(artist) ?? null });
+          }
+        }
+
         tasteOverlaps.push({
           userA: contributorIds[i],
           userB: contributorIds[j],
@@ -244,6 +318,8 @@ export async function GET() {
           onlyGenresB,
           radarGenres,
           compatibilityScore: score,
+          influenceAtoB: influenceAtoB.slice(0, 5),
+          influenceBtoA: influenceBtoA.slice(0, 5),
         });
       }
     }
