@@ -8,7 +8,7 @@ import ChangeBadge from "@/components/ui/Changebadge";
 import { SkeletonList, SkeletonStats, SkeletonBlock } from "@/components/ui/Skeleton";
 import Link from "next/link";
 import {
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell,
 } from "recharts";
 
 interface ContributorStats {
@@ -91,44 +91,52 @@ function compatLabel(score: number): { text: string; emoji: string; gradient: st
   return { text: "Different vibes", emoji: "seedling", gradient: "from-rose-400 to-pink-400" };
 }
 
-function GenreRadar({ overlap, currentUserId, names }: { overlap: TasteOverlap; currentUserId?: string; names?: Record<string, string> }) {
+function GenreButterfly({ overlap, currentUserId, names }: { overlap: TasteOverlap; currentUserId?: string; names?: Record<string, string> }) {
   const nameA = displayName(overlap.userA, currentUserId, names);
   const nameB = displayName(overlap.userB, currentUserId, names);
-  const data = overlap.radarGenres ?? [];
+  const raw = overlap.radarGenres ?? [];
 
-  if (data.length < 3) return null;
+  if (raw.length === 0) return null;
+
+  // Transform: userA goes negative (left), userB positive (right)
+  const data = raw.map((d) => ({
+    genre: d.genre,
+    left: -d.userA,
+    right: d.userB,
+    shared: d.userA > 0 && d.userB > 0,
+  }));
 
   return (
     <div className="bg-surface-1 border-t border-border-subtle px-4 py-4">
-      <p className="text-xs font-semibold text-text-secondary mb-2 text-center">Genre profile</p>
-      <ResponsiveContainer width="100%" height={260}>
-        <RadarChart data={data} cx="50%" cy="50%" outerRadius="70%">
-          <PolarGrid stroke="var(--color-border-subtle)" />
-          <PolarAngleAxis
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-purple">{nameA}</p>
+        <p className="text-xs font-semibold text-text-secondary">Genres</p>
+        <p className="text-xs font-semibold text-accent">{nameB}</p>
+      </div>
+      <ResponsiveContainer width="100%" height={raw.length * 32 + 8}>
+        <BarChart data={data} layout="vertical" margin={{ left: 0, right: 0, top: 0, bottom: 0 }} barGap={0}>
+          <XAxis type="number" hide domain={[-100, 100]} />
+          <YAxis
+            type="category"
             dataKey="genre"
+            width={70}
             tick={{ fontSize: 10, fill: "var(--color-text-muted)" }}
+            axisLine={false}
+            tickLine={false}
           />
-          <Radar
-            name={nameA}
-            dataKey="userA"
-            stroke="rgb(139, 92, 246)"
-            fill="rgb(139, 92, 246)"
-            fillOpacity={0.15}
-            strokeWidth={2}
-          />
-          <Radar
-            name={nameB}
-            dataKey="userB"
-            stroke="rgb(34, 197, 94)"
-            fill="rgb(34, 197, 94)"
-            fillOpacity={0.15}
-            strokeWidth={2}
-          />
-          <Legend
-            wrapperStyle={{ fontSize: 11 }}
-          />
-        </RadarChart>
+          <Bar dataKey="left" stackId="a" barSize={14} radius={[4, 0, 0, 4]}>
+            {data.map((entry, i) => (
+              <Cell key={i} fill={entry.shared ? "rgb(139, 92, 246)" : "rgba(139, 92, 246, 0.4)"} />
+            ))}
+          </Bar>
+          <Bar dataKey="right" stackId="a" barSize={14} radius={[0, 4, 4, 0]}>
+            {data.map((entry, i) => (
+              <Cell key={i} fill={entry.shared ? "rgb(34, 197, 94)" : "rgba(34, 197, 94, 0.4)"} />
+            ))}
+          </Bar>
+        </BarChart>
       </ResponsiveContainer>
+      <p className="text-[10px] text-text-muted text-center mt-2">Bright = both listen &middot; Faded = only one</p>
     </div>
   );
 }
@@ -393,7 +401,7 @@ export default function SocialPage() {
                         {/* Shared artists with images */}
                         {overlap.sharedArtists.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold text-text-secondary mb-3">Artists you both listen to</p>
+                            <p className="text-xs font-semibold text-text-secondary mb-3">Artists both contributed</p>
                             <div className="flex gap-3 overflow-x-auto pb-1">
                               {overlap.sharedArtists.map((artist) => (
                                 <div key={artist.name} className="flex flex-col items-center gap-1.5 shrink-0 w-16">
@@ -428,7 +436,7 @@ export default function SocialPage() {
                       </div>
 
                       {/* Radar chart */}
-                      <GenreRadar overlap={overlap} currentUserId={data.currentUserSpotifyId} names={data.displayNames} />
+                      <GenreButterfly overlap={overlap} currentUserId={data.currentUserSpotifyId} names={data.displayNames} />
                     </div>
                   );
                 })}
