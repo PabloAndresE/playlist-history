@@ -16,10 +16,11 @@ interface ContributorStats {
 interface TasteOverlap {
   userA: string;
   userB: string;
-  sharedArtists: string[];
+  sharedArtists: { name: string; imageUrl: string | null }[];
   sharedGenres: string[];
   onlyGenresA: string[];
   onlyGenresB: string[];
+  radarGenres: { genre: string; userA: number; userB: number }[];
   compatibilityScore: number;
 }
 
@@ -136,6 +137,7 @@ export async function GET() {
   // Compute top artists per contributor (with images) and artist sets for taste overlap
   const contributorArtistSets = new Map<string, Set<string>>();
   const allArtistNames = new Set<string>();
+  const globalArtistImages = new Map<string, string | null>();
 
   for (const [id, contributor] of filteredContributorMap) {
     // Count artists and track best image per artist
@@ -156,7 +158,10 @@ export async function GET() {
 
     const artistSet = new Set(artistCounts.keys());
     contributorArtistSets.set(id, artistSet);
-    for (const name of artistSet) allArtistNames.add(name);
+    for (const [name, { imageUrl }] of artistCounts) {
+      allArtistNames.add(name);
+      if (imageUrl && !globalArtistImages.has(name)) globalArtistImages.set(name, imageUrl);
+    }
 
     // Keep only 5 most recent adds
     contributor.recentAdds = contributor.recentAdds
@@ -167,8 +172,9 @@ export async function GET() {
   // Fetch genres from Last.fm for all artists (batched, uses cache)
   const genreMap = await getGenresForArtists([...allArtistNames]);
 
-  // Assign top genres per contributor
+  // Assign top genres per contributor (keep raw counts for radar)
   const contributorGenreSets = new Map<string, Set<string>>();
+  const contributorGenreCounts = new Map<string, Map<string, number>>();
   for (const [id, contributor] of filteredContributorMap) {
     const genreCounts = new Map<string, number>();
     const artistSet = contributorArtistSets.get(id)!;
@@ -183,6 +189,7 @@ export async function GET() {
       .slice(0, 5)
       .map(([name]) => name);
     contributorGenreSets.set(id, new Set(genreCounts.keys()));
+    contributorGenreCounts.set(id, genreCounts);
   }
 
   // Compute compatibility between pairs (artists 60% + genres 40%)
@@ -207,13 +214,35 @@ export async function GET() {
       if (sharedArtists.length > 0 || sharedGenres.length > 0) {
         const onlyGenresA = [...genresA].filter((g) => !genresB.has(g)).slice(0, 6);
         const onlyGenresB = [...genresB].filter((g) => !genresA.has(g)).slice(0, 6);
+
+        // Shared artists with images
+        const sharedArtistsWithImages = sharedArtists.slice(0, 5).map((name) => ({
+          name,
+          imageUrl: globalArtistImages.get(name) ?? null,
+        }));
+
+        // Radar chart data: top genres from both users (union of top 8)
+        const countsA = contributorGenreCounts.get(contributorIds[i])!;
+        const countsB = contributorGenreCounts.get(contributorIds[j])!;
+        const allGenresSorted = [...new Set([...genresA, ...genresB])]
+          .map((g) => ({ genre: g, total: (countsA.get(g) ?? 0) + (countsB.get(g) ?? 0) }))
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 8);
+        const maxCount = Math.max(...allGenresSorted.map((g) => Math.max(countsA.get(g.genre) ?? 0, countsB.get(g.genre) ?? 0)), 1);
+        const radarGenres = allGenresSorted.map(({ genre }) => ({
+          genre,
+          userA: Math.round(((countsA.get(genre) ?? 0) / maxCount) * 100),
+          userB: Math.round(((countsB.get(genre) ?? 0) / maxCount) * 100),
+        }));
+
         tasteOverlaps.push({
           userA: contributorIds[i],
           userB: contributorIds[j],
-          sharedArtists: sharedArtists.slice(0, 5),
+          sharedArtists: sharedArtistsWithImages,
           sharedGenres: sharedGenres.slice(0, 6),
           onlyGenresA,
           onlyGenresB,
+          radarGenres,
           compatibilityScore: score,
         });
       }

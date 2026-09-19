@@ -7,6 +7,9 @@ import { format } from "date-fns";
 import ChangeBadge from "@/components/ui/Changebadge";
 import { SkeletonList, SkeletonStats, SkeletonBlock } from "@/components/ui/Skeleton";
 import Link from "next/link";
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Legend,
+} from "recharts";
 
 interface ContributorStats {
   spotifyId: string;
@@ -20,10 +23,11 @@ interface ContributorStats {
 interface TasteOverlap {
   userA: string;
   userB: string;
-  sharedArtists: string[];
+  sharedArtists: { name: string; imageUrl: string | null }[];
   sharedGenres: string[];
   onlyGenresA: string[];
   onlyGenresB: string[];
+  radarGenres: { genre: string; userA: number; userB: number }[];
   compatibilityScore: number;
 }
 
@@ -91,55 +95,44 @@ function compatLabel(score: number): { text: string; emoji: string; gradient: st
   return { text: "Different vibes", emoji: "seedling", gradient: "from-rose-400 to-pink-400" };
 }
 
-function GenreVenn({ overlap, currentUserId }: { overlap: TasteOverlap; currentUserId?: string }) {
+function GenreRadar({ overlap, currentUserId }: { overlap: TasteOverlap; currentUserId?: string }) {
   const nameA = displayName(overlap.userA, currentUserId);
   const nameB = displayName(overlap.userB, currentUserId);
-  const onlyA = overlap.onlyGenresA ?? [];
-  const onlyB = overlap.onlyGenresB ?? [];
-  const shared = overlap.sharedGenres;
+  const data = overlap.radarGenres ?? [];
+
+  if (data.length < 3) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-surface-1 border border-border-subtle">
-      {/* Venn circles as HTML layout */}
-      <div className="relative h-64 sm:h-56">
-        {/* Left circle */}
-        <div className="absolute left-[8%] sm:left-[12%] top-1/2 -translate-y-1/2 w-44 h-44 sm:w-48 sm:h-48 rounded-full bg-purple/8 border border-purple/20" />
-        {/* Right circle */}
-        <div className="absolute right-[8%] sm:right-[12%] top-1/2 -translate-y-1/2 w-44 h-44 sm:w-48 sm:h-48 rounded-full bg-accent/8 border border-accent/20" />
-
-        {/* Left label + genres */}
-        <div className="absolute left-[4%] sm:left-[6%] top-3 w-32 sm:w-36 text-center">
-          <p className="text-xs font-bold text-purple mb-2">{nameA}</p>
-          <div className="flex flex-wrap justify-center gap-1">
-            {onlyA.slice(0, 4).map((g) => (
-              <span key={g} className="text-[10px] bg-purple/10 text-purple/80 px-1.5 py-0.5 rounded-full">{g}</span>
-            ))}
-          </div>
-        </div>
-
-        {/* Center — shared genres */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-28 sm:w-32 text-center z-10">
-          <p className="text-[10px] font-semibold text-text-secondary mb-1.5">Both</p>
-          <div className="flex flex-wrap justify-center gap-1">
-            {shared.slice(0, 4).map((g) => (
-              <span key={g} className="text-[10px] bg-text-primary/10 text-text-primary px-1.5 py-0.5 rounded-full font-medium">{g}</span>
-            ))}
-            {shared.length > 4 && (
-              <span className="text-[10px] text-text-muted">+{shared.length - 4}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Right label + genres */}
-        <div className="absolute right-[4%] sm:right-[6%] top-3 w-32 sm:w-36 text-center">
-          <p className="text-xs font-bold text-accent mb-2">{nameB}</p>
-          <div className="flex flex-wrap justify-center gap-1">
-            {onlyB.slice(0, 4).map((g) => (
-              <span key={g} className="text-[10px] bg-accent/10 text-accent/80 px-1.5 py-0.5 rounded-full">{g}</span>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div className="bg-surface-1 border-t border-border-subtle px-4 py-4">
+      <p className="text-xs font-semibold text-text-secondary mb-2 text-center">Genre profile</p>
+      <ResponsiveContainer width="100%" height={260}>
+        <RadarChart data={data} cx="50%" cy="50%" outerRadius="70%">
+          <PolarGrid stroke="var(--color-border-subtle)" />
+          <PolarAngleAxis
+            dataKey="genre"
+            tick={{ fontSize: 10, fill: "var(--color-text-muted)" }}
+          />
+          <Radar
+            name={nameA}
+            dataKey="userA"
+            stroke="rgb(139, 92, 246)"
+            fill="rgb(139, 92, 246)"
+            fillOpacity={0.15}
+            strokeWidth={2}
+          />
+          <Radar
+            name={nameB}
+            dataKey="userB"
+            stroke="rgb(34, 197, 94)"
+            fill="rgb(34, 197, 94)"
+            fillOpacity={0.15}
+            strokeWidth={2}
+          />
+          <Legend
+            wrapperStyle={{ fontSize: 11 }}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -400,19 +393,30 @@ export default function SocialPage() {
                       </div>
 
                       {/* Shared content */}
-                      <div className="bg-surface-1 p-4 space-y-3">
+                      <div className="bg-surface-1 p-4 space-y-4">
+                        {/* Shared artists with images */}
                         {overlap.sharedArtists.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold text-text-secondary mb-1.5">Artists you both listen to</p>
-                            <div className="flex flex-wrap gap-1.5">
+                            <p className="text-xs font-semibold text-text-secondary mb-3">Artists you both listen to</p>
+                            <div className="flex gap-3 overflow-x-auto pb-1">
                               {overlap.sharedArtists.map((artist) => (
-                                <span key={artist} className="text-xs bg-purple/10 text-purple px-2.5 py-1 rounded-full font-medium">
-                                  {artist}
-                                </span>
+                                <div key={artist.name} className="flex flex-col items-center gap-1.5 shrink-0 w-16">
+                                  {artist.imageUrl ? (
+                                    <img src={artist.imageUrl} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-purple/20" />
+                                  ) : (
+                                    <div className="w-14 h-14 rounded-full bg-surface-2 flex items-center justify-center ring-2 ring-purple/20">
+                                      <svg className="w-6 h-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  <p className="text-[10px] text-text-primary text-center font-medium leading-tight truncate w-full">{artist.name}</p>
+                                </div>
                               ))}
                             </div>
                           </div>
                         )}
+                        {/* Shared genres */}
                         {overlap.sharedGenres.length > 0 && (
                           <div>
                             <p className="text-xs font-semibold text-text-secondary mb-1.5">Genres you share</p>
@@ -427,8 +431,8 @@ export default function SocialPage() {
                         )}
                       </div>
 
-                      {/* Venn diagram */}
-                      <GenreVenn overlap={overlap} currentUserId={data.currentUserSpotifyId} />
+                      {/* Radar chart */}
+                      <GenreRadar overlap={overlap} currentUserId={data.currentUserSpotifyId} />
                     </div>
                   );
                 })}
