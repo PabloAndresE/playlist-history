@@ -274,6 +274,17 @@ export async function GET() {
     playlistId: c.trackedPlaylist.spotifyPlaylistId,
   }));
 
+  // Resolve display names for all contributors from the User table
+  const allSpotifyIds = [...filteredContributorMap.keys()].filter((id) => id !== "unknown");
+  const knownUsers = await prisma.user.findMany({
+    where: { spotifyId: { in: allSpotifyIds } },
+    select: { spotifyId: true, displayName: true },
+  });
+  const displayNames: Record<string, string> = {};
+  for (const u of knownUsers) {
+    displayNames[u.spotifyId] = u.displayName;
+  }
+
   // Sort contributors by track count, current user first
   const contributors = [...filteredContributorMap.values()]
     .filter((c) => c.spotifyId !== "unknown")
@@ -290,6 +301,7 @@ export async function GET() {
   return NextResponse.json({
     hasData: true,
     currentUserSpotifyId: user.spotifyId,
+    displayNames,
     playlists: collabPlaylists,
     contributors,
     tasteOverlaps,

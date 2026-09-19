@@ -46,6 +46,7 @@ interface ActivityItem {
 interface DashboardData {
   hasData: boolean;
   currentUserSpotifyId?: string;
+  displayNames?: Record<string, string>;
   playlists: { id: string; name: string; spotifyPlaylistId: string; coverImageUrl: string | null }[];
   contributors: ContributorStats[];
   tasteOverlaps: TasteOverlap[];
@@ -72,20 +73,15 @@ function getGenreColor(index: number) {
   return GENRE_COLORS[index % GENRE_COLORS.length];
 }
 
-// Alias map — hardcoded for now, eventually user-settable
-const ALIASES: Record<string, string> = {
-  "j3fjfbaa4ok18y7x4x706gefg": "Charlie",
-};
-
-function displayName(spotifyId: string, currentUserId?: string) {
+function displayName(spotifyId: string, currentUserId?: string, names?: Record<string, string>) {
   if (spotifyId === currentUserId) return "You";
-  return ALIASES[spotifyId] ?? spotifyId;
+  return names?.[spotifyId] ?? spotifyId;
 }
 
-function displayInitial(spotifyId: string, currentUserId?: string) {
+function displayInitial(spotifyId: string, currentUserId?: string, names?: Record<string, string>) {
   if (spotifyId === currentUserId) return "Y";
-  const name = ALIASES[spotifyId];
-  return name ? name.charAt(0) : spotifyId.charAt(0).toUpperCase();
+  const name = names?.[spotifyId];
+  return name ? name.charAt(0).toUpperCase() : spotifyId.charAt(0).toUpperCase();
 }
 
 function compatLabel(score: number): { text: string; emoji: string; gradient: string } {
@@ -95,9 +91,9 @@ function compatLabel(score: number): { text: string; emoji: string; gradient: st
   return { text: "Different vibes", emoji: "seedling", gradient: "from-rose-400 to-pink-400" };
 }
 
-function GenreRadar({ overlap, currentUserId }: { overlap: TasteOverlap; currentUserId?: string }) {
-  const nameA = displayName(overlap.userA, currentUserId);
-  const nameB = displayName(overlap.userB, currentUserId);
+function GenreRadar({ overlap, currentUserId, names }: { overlap: TasteOverlap; currentUserId?: string; names?: Record<string, string> }) {
+  const nameA = displayName(overlap.userA, currentUserId, names);
+  const nameB = displayName(overlap.userB, currentUserId, names);
   const data = overlap.radarGenres ?? [];
 
   if (data.length < 3) return null;
@@ -262,12 +258,12 @@ export default function SocialPage() {
                       {/* Header */}
                       <div className="flex items-center gap-3 mb-3">
                         <div className={`w-10 h-10 rounded-full ${getColor(i)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
-                          {displayInitial(contributor.spotifyId, data.currentUserSpotifyId)}
+                          {displayInitial(contributor.spotifyId, data.currentUserSpotifyId, data.displayNames)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-text-primary truncate">
-                              {displayName(contributor.spotifyId, data.currentUserSpotifyId)}
+                              {displayName(contributor.spotifyId, data.currentUserSpotifyId, data.displayNames)}
                             </p>
                             {isYou && (
                               <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded">you</span>
@@ -370,8 +366,8 @@ export default function SocialPage() {
               <div className="space-y-4">
                 {data.tasteOverlaps.map((overlap, i) => {
                   const label = compatLabel(overlap.compatibilityScore);
-                  const nameA = displayName(overlap.userA, data.currentUserSpotifyId);
-                  const nameB = displayName(overlap.userB, data.currentUserSpotifyId);
+                  const nameA = displayName(overlap.userA, data.currentUserSpotifyId, data.displayNames);
+                  const nameB = displayName(overlap.userB, data.currentUserSpotifyId, data.displayNames);
                   return (
                     <div key={i} className="rounded-2xl border border-border-subtle overflow-hidden">
                       {/* Blend-style header */}
@@ -432,7 +428,7 @@ export default function SocialPage() {
                       </div>
 
                       {/* Radar chart */}
-                      <GenreRadar overlap={overlap} currentUserId={data.currentUserSpotifyId} />
+                      <GenreRadar overlap={overlap} currentUserId={data.currentUserSpotifyId} names={data.displayNames} />
                     </div>
                   );
                 })}
@@ -487,7 +483,7 @@ export default function SocialPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-text-primary">
                       <span className="font-medium text-purple">
-                        {displayName(change.changedBySpotifyId ?? "Unknown", data.currentUserSpotifyId)}
+                        {displayName(change.changedBySpotifyId ?? "Unknown", data.currentUserSpotifyId, data.displayNames)}
                       </span>{" "}
                       {change.changeType === "ADDED" ? "added" : "removed"}{" "}
                       <span className="font-medium">{change.trackName}</span>
