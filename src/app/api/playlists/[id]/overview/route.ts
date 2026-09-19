@@ -31,11 +31,12 @@ export async function GET(
 
     if (!snapshot) {
       return NextResponse.json({
-        tracks: [],
-        topArtists: [],
         totalTracks: 0,
         uniqueArtists: 0,
+        topArtists: [],
+        recentTracks: [],
         lastSnapshot: null,
+        snapshotSource: null,
       });
     }
 

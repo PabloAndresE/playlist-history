@@ -12,17 +12,16 @@ export async function GET() {
     where: {
       trackedPlaylist: {
         userId: session.user.id,
-        isCollaborative: true,
       },
       changedBySpotifyId: { not: null },
     },
     include: {
       trackedPlaylist: {
-        select: { id: true, name: true },
+        select: { name: true, spotifyPlaylistId: true },
       },
     },
     orderBy: { detectedAt: "desc" },
-    take: 100,
+    take: 50,
   });
 
   const result = changes.map((c) => ({
@@ -31,10 +30,10 @@ export async function GET() {
     artistName: c.artistName,
     albumImageUrl: c.albumImageUrl,
     changeType: c.changeType,
-    detectedAt: c.detectedAt,
+    detectedAt: c.detectedAt.toISOString(),
     changedBySpotifyId: c.changedBySpotifyId,
     playlistName: c.trackedPlaylist.name,
-    playlistId: c.trackedPlaylist.id,
+    playlistId: c.trackedPlaylist.spotifyPlaylistId,
   }));
 
   return NextResponse.json(result);

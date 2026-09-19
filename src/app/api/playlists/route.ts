@@ -142,6 +142,8 @@ export async function POST(req: NextRequest) {
         name: playlistData.name,
         description: playlistData.description,
         coverImageUrl: playlistData.coverImageUrl,
+        isPublic: playlistData.isPublic,
+        isCollaborative: playlistData.isCollaborative,
         trackCount: playlistData.trackCount,
       },
     });

@@ -276,7 +276,7 @@ export default function PlaylistDetailPage() {
           )}
 
           {/* Top Artists */}
-          {overview.topArtists.length > 0 && (
+          {overview.topArtists?.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-text-primary mb-3">Top Artists</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -301,7 +301,7 @@ export default function PlaylistDetailPage() {
           )}
 
           {/* Recent Tracks */}
-          {overview.recentTracks.length > 0 && (
+          {overview.recentTracks?.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-text-primary mb-3">Recently Added</h3>
               <div className="bg-surface-1 rounded-xl border border-border-subtle divide-y divide-border-subtle">
